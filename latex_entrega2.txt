@@ -1,0 +1,618 @@
+\documentclass{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[spanish,es-tabla]{babel}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{array}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{url}
+
+\theoremstyle{definition}
+\newtheorem*{defn*}{Definición}
+\theoremstyle{plain}
+\newtheorem{teo}{Teorema}
+
+% Pseudocódigo en español
+\floatname{algorithm}{Algoritmo}
+\algrenewcommand\algorithmicrequire{\textbf{Entrada:}}
+\algrenewcommand\algorithmicensure{\textbf{Salida:}}
+\algrenewcommand\algorithmicfor{\textbf{para}}
+\algrenewcommand\algorithmicforall{\textbf{para cada}}
+\algrenewcommand\algorithmicdo{\textbf{hacer}}
+\algrenewcommand\algorithmicwhile{\textbf{mientras}}
+\algrenewcommand\algorithmicif{\textbf{si}}
+\algrenewcommand\algorithmicthen{\textbf{entonces}}
+\algrenewcommand\algorithmicelse{\textbf{si no}}
+\algrenewcommand\algorithmicreturn{\textbf{retornar}}
+\algrenewcommand\algorithmicend{\textbf{fin}}
+\algrenewcommand\algorithmicfunction{\textbf{función}}
+\algrenewcommand\algorithmicprocedure{\textbf{procedimiento}}
+\algrenewcommand\algorithmicrepeat{\textbf{repetir}}
+\algrenewcommand\algorithmicuntil{\textbf{hasta}}
+\algnewcommand\algorithmicbreak{\textbf{terminar}}
+\algnewcommand\Break{\algorithmicbreak}
+
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+
+\title{Asignación de Horarios Estudiantiles}
+\author{}
+\date{Noviembre de 2026}
+
+\begin{document}
+
+\begin{titlepage}
+    \centering
+    \vspace*{1cm}
+    \includegraphics[height=3.5cm]{Logo_Javeriana.png}\\[1cm]
+
+    {\large \textbf{FACULTAD DE INGENIERÍA}}\\[0.2cm]
+    {\large \textbf{DEPARTAMENTO DE INGENIERÍA DE SISTEMAS}}\\[1.5cm]
+
+    {\large \textbf{Análisis de Algoritmos}}\\[0.2cm]
+    Profesor: Andrés Moreno Barbosa, PhD\\[1.5cm]
+
+    {\Huge Proyecto - Entrega 2}\\[0.4cm]
+    Asignación de horarios estudiantiles\\[2cm]
+
+    Presentado por:\\[0.3cm]
+    Juan Diego Ariza Lopez\\[0.2cm]
+    Diego Alejandro Mendoza Cruz\\[2cm]
+
+    Bogotá D.C., Colombia\\[0.2cm]
+    Noviembre de 2026
+\end{titlepage}
+
+\maketitle
+
+\begin{abstract}
+En este documento se presenta la segunda entrega del proyecto: la
+implementación del algoritmo de asignación de horarios a partir del diseño y
+la formalización de la primera entrega. Primero mostramos que el problema es
+NP-difícil, lo que justifica no buscar un algoritmo exacto para instancias
+grandes. Después describimos la implementación, el algoritmo propuesto (un
+voraz por prioridad seguido de una búsqueda local) y su complejidad, junto
+con la fuerza bruta que usamos como referencia. Por último presentamos los
+experimentos: en 99 instancias pequeñas el algoritmo encuentra el óptimo en
+72 y queda en promedio a 0{,}77\,\% de él, y resuelve instancias de 5000
+estudiantes en menos de un minuto.
+\end{abstract}
+
+\part{Algoritmo}
+
+\section{El problema}
+
+Usamos la formalización de la primera entrega sin cambios. Dadas las
+franjas $F=D\times H$, las asignaturas $A$, los profesores $P$, los salones
+$S$ con su distancia $\delta$, las secciones
+$g=\langle a_{g},p_{g},s_{g},F_{g},c_{g}\rangle\in G$, los estudiantes
+$e=\langle R_{e},\pi_{e},N_{e},L_{e},C_{e},\varphi_{e}\rangle\in E$ y los
+pesos $w_{1},\dots,w_{5}$, se busca una asignación $X\subseteq E\times G$
+que cumpla las restricciones
+\begin{align}
+a_{g} & \in R_{e} &  & \forall_{(e,g)\in X}\label{eq:pedidas}\\
+a_{g}\neq a_{g'}\wedge F_{g}\cap F_{g'} & =\emptyset &  & \forall_{e\in E,\ g\neq g'\in G_{X}(e)}\label{eq:cruces}\\
+F_{g}\cap N_{e} & =\emptyset &  & \forall_{(e,g)\in X}\label{eq:disp}\\
+\left|\{e\in E\mid(e,g)\in X\}\right| & \leq c_{g} &  & \forall_{g\in G}\label{eq:cupo}
+\end{align}
+y que maximice
+\[
+f(X)=w_{1}f_{1}(X)+w_{2}f_{2}(X)+w_{3}f_{3}(X)-w_{4}f_{4}(X)-w_{5}f_{5}(X),
+\]
+donde $f_{1}$ es la prioridad de lo inscrito, $f_{2}$ la afinidad con los
+profesores, $f_{3}$ el número de veces que un estudiante queda con un
+compañero, $f_{4}$ las franjas que se querían libres y quedaron ocupadas, y
+$f_{5}$ la distancia caminada entre clases seguidas.
+
+\subsection{Complejidad del problema}
+
+\begin{teo}
+Decidir si existe una asignación válida $X$ con $f(X)\geq K$ es
+NP-completo; por lo tanto, el problema de optimización es NP-difícil.
+\end{teo}
+
+\begin{proof}
+El problema está en NP porque, dada $X$, el verificador revisa las
+restricciones \eqref{eq:pedidas}--\eqref{eq:cupo} y calcula $f(X)$ en
+tiempo polinomial. Para ver que es NP-difícil reducimos el problema del
+conjunto independiente máximo: dado un grafo $\mathcal{G}=(V,\mathcal{E})$
+y un entero $K$, ¿existe $I\subseteq V$ independiente con $|I|\geq K$?
+
+Construimos una instancia con un solo día, un bloque por cada arista
+($h=|\mathcal{E}|$), una asignatura $a_{v}$ con una sola sección $g_{v}$ por
+cada vértice $v$, con $F_{g_{v}}$ igual a las franjas de las aristas que
+tocan a $v$ y cupo 1, y un único estudiante que pide todas las asignaturas
+con prioridad 1, sin franjas bloqueadas, sin compañeros y con afinidad 0. Con
+$w_{1}=1$ y $w_{2}=\dots=w_{5}=0$, se tiene $f(X)=|X|$. Dos secciones
+$g_{u}$ y $g_{v}$ se cruzan si y solo si $(u,v)\in\mathcal{E}$, así que por
+\eqref{eq:cruces} las secciones de $X$ corresponden a un conjunto
+independiente, y al revés. Entonces existe $X$ con $f(X)\geq K$ si y solo si
+$\mathcal{G}$ tiene un conjunto independiente de tamaño $K$. La construcción
+es polinomial en $|V|+|\mathcal{E}|$.
+\end{proof}
+
+El caso con muchos estudiantes es todavía más difícil, porque además de los
+cruces de cada estudiante hay competencia por los cupos y dependencias entre
+estudiantes (compañeros). Por eso usamos un algoritmo exacto (fuerza bruta)
+solo en instancias pequeñas, como referencia, y para el resto proponemos un
+algoritmo aproximado.
+
+\section{Implementación}
+
+El proyecto está escrito en Python 3, sin librerías externas (salvo
+\texttt{matplotlib} para las gráficas), y está organizado en un paquete
+\texttt{horarios} con un módulo por responsabilidad (Tabla
+\ref{tab:modulos}). Los archivos de entrada y salida siguen exactamente la
+estructura JSON definida en la primera entrega.
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{|L{2.6cm}|L{9.0cm}|}
+\hline
+Módulo & Responsabilidad\\
+\hline
+\texttt{modelo} & Clases \texttt{Seccion}, \texttt{Estudiante} e
+\texttt{Instancia}; cada campo corresponde a un elemento de las entradas.\\
+\hline
+\texttt{validador} & Las 7 reglas de validez de una instancia.\\
+\hline
+\texttt{verificador} & Restricciones \eqref{eq:pedidas}--\eqref{eq:cupo},
+cálculo de $f_{1},\dots,f_{5}$ y $f$ desde cero, y comparación con la salida
+esperada.\\
+\hline
+\texttt{generador} & Generador de instancias con semilla (Sección 3 de la
+primera entrega).\\
+\hline
+\texttt{estado} & Asignación parcial con $f$ actualizada de forma
+incremental.\\
+\hline
+\texttt{fuerza\_bruta} & Óptimo exacto por \emph{backtracking}.\\
+\hline
+\texttt{casos} & Los 6 casos hechos a mano.\\
+\hline
+\texttt{algoritmo} & El algoritmo propuesto: voraz y búsqueda local.\\
+\hline
+\end{tabular}
+\caption{Módulos de la implementación.}
+\label{tab:modulos}
+\end{table}
+
+Todo el código tiene 53 pruebas unitarias: una por cada regla de validez y
+cada restricción, los 6 casos hechos a mano, la comparación de la fuerza
+bruta contra un recorrido ingenuo de las $(t+1)^{n\cdot q}$ combinaciones, y
+la comparación de la $f$ incremental contra la $f$ calculada desde cero.
+
+\subsection{Estado incremental}
+
+Tanto la fuerza bruta como la búsqueda local agregan y quitan pares
+$(e,g)$ muchas veces, y recalcular $f$ desde cero cuesta $O(|X|)$. Por eso
+la clase \texttt{Estado} guarda $G_{X}(e)$, los inscritos de cada sección,
+las franjas ocupadas $O_{X}(e)$ y los valores $f_{1},\dots,f_{5}$, y los
+actualiza en cada cambio. Si se inscribe a $e$ en $g$ y la asignación sigue
+siendo válida, cada criterio cambia en
+\begin{align*}
+\Delta f_{1} & =\pi_{e}(a_{g}), \qquad \Delta f_{2}=\varphi_{e}(p_{g}),\\
+\Delta f_{3} & =\left|C_{e}\cap I(g)\right|+\left|\{e'\in I(g)\mid e\in C_{e'}\}\right|,\\
+\Delta f_{4} & =\left|L_{e}\cap F_{g}\right|,\\
+\Delta f_{5} & =\sum_{g'\in G_{X}(e)}\delta(s_{g},s_{g'})\cdot\bigl(\sigma(g,g')+\sigma(g',g)\bigr),
+\end{align*}
+donde $I(g)$ son los inscritos de $g$ y
+$\sigma(g,g')=|\{(d,b)\in F_{g}\mid(d,b+1)\in F_{g'}\}|$ es el número de
+veces que $g'$ va justo después de $g$. La fórmula de $\Delta f_{4}$ es
+exacta porque, por \eqref{eq:cruces}, $F_{g}$ no se cruza con las otras
+clases de $e$. Así, cada cambio cuesta $O(k_{e}+|C_{e}|)$, con $k_{e}$ el
+número de clases de $e$, en lugar de $O(|X|)$. Llamamos \emph{ganancia} de
+$(e,g)$ a $\Delta f=\sum_{i}\pm w_{i}\Delta f_{i}$.
+
+\section{Algoritmo propuesto}
+
+\subsection{Fase 1: voraz por prioridad}
+
+Como $w_{1}$ es el peso más grande, lo más importante es inscribir las
+solicitudes de mayor prioridad. El voraz (Algoritmo \ref{alg:voraz}) recorre
+todas las solicitudes de mayor a menor prioridad y le da a cada una la
+sección válida con mayor ganancia. La ganancia ya tiene en cuenta la
+afinidad, los compañeros inscritos antes, las franjas libres y la distancia
+a las otras clases del estudiante. Entre solicitudes de igual prioridad van
+primero las asignaturas con menos secciones, que son las que tienen menos
+opciones.
+
+\begin{algorithm}[H]
+\caption{Voraz por prioridad}\label{alg:voraz}
+\begin{algorithmic}[1]
+\Require una instancia
+\Ensure una asignación válida $X$
+\State $X\gets\emptyset$
+\State $L\gets$ solicitudes $(e,a)$ con $a\in R_{e}$, ordenadas por $\pi_{e}(a)$ descendente y luego por $|G_{a}|$ ascendente
+\ForAll{$(e,a)\in L$}
+  \State $g^{*}\gets\arg\max\{\Delta f(e,g)\mid g\in G_{a},\ X\cup\{(e,g)\}\text{ es válida}\}$
+  \If{$g^{*}$ existe y $\Delta f(e,g^{*})>0$}
+    \State $X\gets X\cup\{(e,g^{*})\}$
+  \EndIf
+\EndFor
+\State \Return $X$
+\end{algorithmic}
+\end{algorithm}
+
+El voraz nunca se devuelve, y eso lo puede llevar a malas decisiones. Por
+ejemplo, si un estudiante pide $A$ con prioridad 5 y $B$ con prioridad 4,
+$A$ tiene dos secciones (lunes y martes) y $B$ solo una (martes), y el
+estudiante tiene afinidad 2 con el profesor de la sección del martes de $A$,
+el voraz lo inscribe en $A$ el martes (ganancia $50+4$) y después ya no
+puede tomar $B$. Así obtiene $f=54$, cuando el óptimo es $f=90$ ($A$ el
+lunes y $B$ el martes).
+
+\subsection{Fase 2: búsqueda local}
+
+La búsqueda local parte de la asignación del voraz y aplica cuatro
+movimientos. Cada uno solo se acepta si $f$ aumenta, y si no, se deshace:
+
+\begin{enumerate}
+\item[A.] \textbf{Insertar:} una solicitud pendiente toma una sección que
+quedó con cupo.
+\item[B.] \textbf{Cambiar:} un estudiante pasa a otra sección de la misma
+asignatura, o la suelta si eso aumenta $f$.
+\item[C.] \textbf{Expulsar:} una solicitud pendiente $(e,a)$ entra a una
+sección $g$ de $a$ sacando lo que estorba: las clases de $e$ que se cruzan
+con $g$ y, si $g$ está llena, a otro estudiante $e_{2}$ de $g$ (se prueban
+los 3 más prometedores: primero los que tienen otra sección libre a donde
+ir y luego los de menor prioridad). Después se intenta reubicar lo que
+salió en otras secciones (Algoritmo \ref{alg:expulsar}). Este movimiento
+corrige el ejemplo anterior.
+\item[D.] \textbf{Intercambiar:} dos estudiantes de dos secciones llenas de
+la misma asignatura cambian de sección entre sí. Ninguno de los dos podría
+moverse solo, porque no hay cupo.
+\end{enumerate}
+
+\begin{algorithm}[H]
+\caption{Movimiento de expulsión}\label{alg:expulsar}
+\begin{algorithmic}[1]
+\ForAll{solicitud pendiente $(e,a)$, de mayor a menor prioridad}
+  \ForAll{$g\in G_{a}$ con $F_{g}\cap N_{e}=\emptyset$}
+    \State $K\gets\{g'\in G_{X}(e)\mid F_{g'}\cap F_{g}\neq\emptyset\}$
+    \State $V\gets$ los 3 mejores candidatos $e_{2}\in I(g)$ si $g$ está llena; si no, $\{\text{ninguno}\}$
+    \ForAll{$e_{2}\in V$}
+      \State $f_{0}\gets f(X)$
+      \State quitar de $X$ los pares $(e,g')$ con $g'\in K$ y el par $(e_{2},g)$
+      \State agregar $(e,g)$ a $X$
+      \State reubicar a $e_{2}$ en la mejor sección válida de $a$, si la hay
+      \State reubicar cada asignatura de $K$ en la mejor sección válida, si la hay
+      \If{$f(X)>f_{0}$}
+        \State aceptar y pasar a la siguiente solicitud
+      \Else
+        \State deshacer los cambios
+      \EndIf
+    \EndFor
+  \EndFor
+\EndFor
+\end{algorithmic}
+\end{algorithm}
+
+En el intercambio, el cambio de $f$ se calcula con una fórmula directa,
+sin modificar $X$. Si $e_{1}\in I(g_{1})$ y $e_{2}\in I(g_{2})$ intercambian,
+$f_{1}$ no cambia (es la misma asignatura), $f_{2}$ y $f_{4}$ cambian según la
+afinidad y las franjas libres de cada uno en su sección nueva, $f_{5}$ según
+sus distancias con sus demás clases, y
+\[
+\Delta f_{3}=m(e_{1},I(g_{2}))+m(e_{2},I(g_{1}))-m(e_{1},I(g_{1}))-m(e_{2},I(g_{2}))-2c_{12},
+\]
+donde $m(e,I)$ es el número de relaciones de compañero entre $e$ y los
+estudiantes de $I$ (en las dos direcciones) y $c_{12}$ es el número de
+relaciones entre $e_{1}$ y $e_{2}$, que nunca quedan juntos.
+
+Los movimientos se aplican por pasadas (Algoritmo \ref{alg:bl}). Después de
+la primera, solo se revisan las asignaturas y los estudiantes que cambiaron
+en la pasada anterior, porque un movimiento sobre algo que no cambió da el
+mismo resultado que antes. Cuando una de esas pasadas no encuentra mejoras,
+se hace una pasada completa para confirmar que se llegó a un óptimo local.
+
+\begin{algorithm}[H]
+\caption{Búsqueda local}\label{alg:bl}
+\begin{algorithmic}[1]
+\Require una asignación válida $X$ (la del voraz)
+\Ensure una asignación válida $X'$ con $f(X')\geq f(X)$
+\State $\mathit{completa}\gets$ verdadero
+\While{no se alcance el límite de pasadas o de tiempo}
+  \State $\mathit{mejoras}\gets$ \Call{Insertar}{$X$} $+$ \Call{Cambiar}{$X$} $+$ \Call{Expulsar}{$X$} $+$ \Call{Intercambiar}{$X$}
+  \If{$\mathit{mejoras}>0$}
+    \State $\mathit{completa}\gets$ falso \Comment{la siguiente pasada solo revisa lo que cambió}
+  \ElsIf{$\mathit{completa}$}
+    \State \Break \Comment{óptimo local}
+  \Else
+    \State $\mathit{completa}\gets$ verdadero \Comment{confirmar con una pasada completa}
+  \EndIf
+\EndWhile
+\State \Return $X$
+\end{algorithmic}
+\end{algorithm}
+
+La búsqueda siempre termina: cada movimiento aceptado aumenta $f$
+estrictamente y hay un número finito de asignaciones. En la práctica,
+además, se limita el número de pasadas (100) y el tiempo. En todos los
+experimentos terminó por llegar a un óptimo local, con entre 7 y 15
+pasadas.
+
+\subsection{Fuerza bruta (referencia)}
+
+Para conocer el óptimo de instancias pequeñas usamos una búsqueda exhaustiva
+con \emph{backtracking} (Algoritmo \ref{alg:fb}): se decide una solicitud
+por nivel (ninguna sección o una de las de su asignatura) y se descartan las
+ramas que ya violan una restricción. Esa poda no cambia el resultado, porque
+ninguna hoja de una rama inválida puede ser válida; solo evita recorrerlas.
+
+\begin{algorithm}[H]
+\caption{Fuerza bruta}\label{alg:fb}
+\begin{algorithmic}[1]
+\Function{Explorar}{$i$}
+  \If{$i=|L|$}
+    \State si $f(X)>f(X^{*})$, entonces $X^{*}\gets X$
+    \State \Return
+  \EndIf
+  \State $(e,a)\gets L[i]$
+  \State \Call{Explorar}{$i+1$} \Comment{no inscribir la solicitud}
+  \ForAll{$g\in G_{a}$ tal que $X\cup\{(e,g)\}$ es válida}
+    \State agregar $(e,g)$ a $X$; \Call{Explorar}{$i+1$}; quitar $(e,g)$ de $X$
+  \EndFor
+\EndFunction
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Análisis de complejidad}
+
+Sean $n$ el número de estudiantes, $Q=\sum_{e}|R_{e}|$ el número de
+solicitudes, $P\leq Q$ las solicitudes pendientes, $t$ el máximo de
+secciones por asignatura, $q$ el máximo de asignaturas por estudiante,
+$c$ el máximo de compañeros, $\kappa$ el cupo de una sección y
+$\tau=O(q+c)$ el costo de evaluar la ganancia de un par $(e,g)$ con el
+estado incremental. La Tabla \ref{tab:complejidad} resume el costo de cada
+parte.
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{|L{4.4cm}|L{7.2cm}|}
+\hline
+Parte & Costo\\
+\hline
+Verificador & $O\bigl(|X|+\sum_{e}k_{e}^{2}\,|F_{g}|\bigr)$\\
+\hline
+Voraz & $O(Q\log Q+Q\cdot t\cdot\tau)$\\
+\hline
+Búsqueda local, una pasada completa &
+A: $O(P\log P+P\,t\,\tau)$; B: $O(Q\,t\,\tau)$;
+C: $O(P\,t\,(\kappa\log\kappa+3\tau))$; D: $O(\sum_{a}t_{a}^{2}\kappa^{2}\tau)$\\
+\hline
+Fuerza bruta & $O\bigl(\prod_{(e,a)}(t_{a}+1)\cdot\tau\bigr)=O\bigl((t+1)^{Q}\,\tau\bigr)$\\
+\hline
+\end{tabular}
+\caption{Complejidad de cada parte.}
+\label{tab:complejidad}
+\end{table}
+
+Como en el problema real $q\leq 6$, $t\leq 4$ y $c$ y $\kappa$ no dependen de
+$n$, se tiene $Q=O(n)$, el voraz es $O(n\log n)$ y una pasada completa de la
+búsqueda local es $O(n\log n)$ (por el ordenamiento de las solicitudes
+pendientes). El número de pasadas no tiene una cota polinomial demostrable,
+porque solo sabemos que $f$ crece en cada una; por eso se limita a $L$
+pasadas, y la búsqueda local completa queda en $O(L\cdot n\log n)$. En los
+experimentos el número de pasadas creció poco con $n$ (de 7 a 15). La
+fuerza bruta, en cambio, es exponencial en el número de solicitudes.
+
+\section{Ajustes respecto a la primera entrega}
+
+Durante la implementación hicimos cuatro ajustes, que no cambian la
+formalización:
+
+\begin{enumerate}
+\item \textbf{Caso hecho a mano 4.} Como estaba escrito (dos amigos y dos
+secciones iguales) tenía dos óptimos: los dos en la primera sección o los dos
+en la segunda, y no se podía comparar contra una asignación exacta. Le
+agregamos que el primer estudiante quiere libre la franja de la segunda
+sección, así que el óptimo es único: los dos quedan en la primera.
+\item \textbf{Cupos según la demanda.} Con un rango de cupos fijo, en las
+instancias grandes casi nadie quedaba inscrito y en las pequeñas sobraban
+cupos. Ahora el generador calcula la demanda de cada asignatura y reparte
+entre sus secciones un cupo de $\text{demanda}\times\text{holgura}\times U(0{,}8;1{,}2)$,
+donde la holgura (0{,}9 por defecto) controla la competencia.
+\item \textbf{Instancias más realistas.} Cada estudiante tiene más
+probabilidad de pedir asignaturas de su semestre (así los amigos comparten
+clases y $f_{3}$ importa), y conoce a pocos profesores, sobre todo a los de
+sus asignaturas (así la afinidad sí influye).
+\item \textbf{Reporte del verificador.} Además de los campos de la primera
+entrega, incluye el valor recalculado de cada criterio y el resultado de la
+comparación con la salida esperada.
+\end{enumerate}
+
+\part{Resultados}
+
+\section{Metodología}
+
+Todos los experimentos se corrieron en un computador personal con Python
+3.14, en un solo hilo. Todas las salidas pasaron por el verificador antes de
+registrarse, y ninguna violó las restricciones. Se hicieron tres
+experimentos:
+
+\begin{enumerate}
+\item \textbf{Calidad:} 99 instancias pequeñas ($n=3$ a $6$, con 5
+asignaturas, 2 o 3 solicitudes por estudiante y de 1 a 3 secciones por
+asignatura) cuyo óptimo se calculó con la fuerza bruta.
+\item \textbf{Escalabilidad:} instancias de 100 a 5000 estudiantes, tres
+semillas por tamaño, con los parámetros por defecto del generador.
+\item \textbf{Competencia:} una instancia de 1000 estudiantes con holguras
+entre 0{,}5 y 1{,}5.
+\end{enumerate}
+
+Además, el algoritmo resuelve correctamente los 6 casos hechos a mano.
+
+\section{Calidad contra el óptimo}
+
+La brecha de una solución $X$ es $100\cdot(f(X^{*})-f(X))/f(X^{*})$, con
+$X^{*}$ la asignación óptima. La búsqueda local duplica el número de
+instancias en las que se llega al óptimo y reduce la brecha promedio de
+2{,}13\,\% a 0{,}77\,\% (Tabla \ref{tab:calidad} y Figura
+\ref{fig:brecha}). En 83 de las 99 instancias la brecha final es de 1\,\% o
+menos.
+
+\begin{table}[H]
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{|c|c|c|c|c|c|}
+\hline
+$n$ & Instancias & \multicolumn{2}{c|}{Óptimas} & \multicolumn{2}{c|}{Brecha promedio}\\
+ & & voraz & voraz+BL & voraz & voraz+BL\\
+\hline
+3 & 30 & 14 & 23 & 1{,}75\,\% & 0{,}73\,\%\\
+4 & 30 & 10 & 21 & 1{,}79\,\% & 0{,}68\,\%\\
+5 & 30 & 10 & 22 & 2{,}77\,\% & 0{,}91\,\%\\
+6 & 9 & 2 & 6 & 2{,}37\,\% & 0{,}77\,\%\\
+\hline
+Total & 99 & 36 & 72 & 2{,}13\,\% & 0{,}77\,\%\\
+\hline
+\end{tabular}
+\caption{Calidad contra el óptimo (BL: búsqueda local).}
+\label{tab:calidad}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{brecha_optimo.pdf}
+\caption{Brecha promedio contra el óptimo.}
+\label{fig:brecha}
+\end{figure}
+
+La Figura \ref{fig:fb} compara los tiempos en esas mismas instancias. El
+tiempo de la fuerza bruta se multiplica por cerca de 10 con cada estudiante
+adicional, mientras que el del algoritmo se mantiene por debajo de un
+milisegundo.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{fuerza_bruta_vs_algoritmo.pdf}
+\caption{Tiempo de la fuerza bruta y del algoritmo en instancias pequeñas.}
+\label{fig:fb}
+\end{figure}
+
+\section{Escalabilidad}
+
+La Tabla \ref{tab:escalabilidad} muestra el promedio de las tres semillas
+para cada tamaño. La búsqueda local mejora $f$ entre 3{,}2\,\% y 3{,}9\,\%
+sobre el voraz e inscribe cerca de 3 puntos porcentuales más de las
+solicitudes. Ajustando una recta en escala log-log (Figura
+\ref{fig:tiempo}), el tiempo del voraz crece como $n^{1{,}10}$, que
+coincide con $O(n\log n)$. El del algoritmo completo crece como
+$n^{1{,}56}$, por encima de la cota $O(L\cdot n\log n)$ con $L$ fijo: el
+número de movimientos aceptados crece con $n$, y cada uno obliga a volver a
+revisar las asignaturas y estudiantes que tocó en las pasadas siguientes.
+Aun así, el crecimiento es polinomial y está muy lejos del exponencial de la
+fuerza bruta.
+
+\begin{table}[H]
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{|c|c|c|c|c|c|c|}
+\hline
+$n$ & Secciones & Solicitudes & \multicolumn{2}{c|}{Tiempo} & Inscritas & Mejora\\
+ & & & voraz & voraz+BL & voraz $\to$ voraz+BL & de $f$\\
+\hline
+100 & 39 & 463 & 0{,}003 s & 0{,}13 s & 81{,}1 $\to$ 83{,}7\,\% & 3{,}23\,\%\\
+250 & 72 & 1122 & 0{,}009 s & 0{,}44 s & 84{,}0 $\to$ 86{,}7\,\% & 3{,}26\,\%\\
+500 & 115 & 2257 & 0{,}018 s & 1{,}20 s & 83{,}2 $\to$ 86{,}5\,\% & 3{,}90\,\%\\
+1000 & 187 & 4503 & 0{,}040 s & 3{,}64 s & 83{,}5 $\to$ 86{,}2\,\% & 3{,}62\,\%\\
+2500 & 428 & 11205 & 0{,}100 s & 18{,}18 s & 83{,}5 $\to$ 86{,}2\,\% & 3{,}29\,\%\\
+5000 & 871 & 22499 & 0{,}239 s & 51{,}60 s & 83{,}2 $\to$ 86{,}2\,\% & 3{,}48\,\%\\
+\hline
+\end{tabular}
+\caption{Escalabilidad (promedio de 3 semillas).}
+\label{tab:escalabilidad}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{tiempo_vs_n.pdf}
+\caption{Tiempo de ejecución según el número de estudiantes (escala log-log).}
+\label{fig:tiempo}
+\end{figure}
+
+\section{Competencia por los cupos}
+
+La holgura es la razón entre los cupos ofrecidos y las solicitudes de cada
+asignatura. Con poca holgura casi todas las secciones quedan llenas desde
+el voraz, así que la búsqueda local ya no puede inscribir a más estudiantes
+y solo reorganiza; su efecto se nota cuando hay algo de espacio (Tabla
+\ref{tab:competencia} y Figura \ref{fig:competencia}). En todos los casos
+se inscribe más del 97\,\% de las solicitudes de prioridad 5, que es lo que
+busca el peso $w_{1}$.
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{|c|c|c|c|}
+\hline
+Holgura & Inscritas voraz & Inscritas voraz+BL & Prioridad 5 inscritas\\
+\hline
+0{,}5 & 49{,}77\,\% & 49{,}77\,\% & 97{,}44\,\%\\
+0{,}7 & 69{,}53\,\% & 69{,}62\,\% & 97{,}44\,\%\\
+0{,}9 & 83{,}61\,\% & 86{,}06\,\% & 97{,}44\,\%\\
+1{,}1 & 89{,}61\,\% & 93{,}34\,\% & 97{,}44\,\%\\
+1{,}3 & 91{,}09\,\% & 94{,}24\,\% & 97{,}44\,\%\\
+1{,}5 & 91{,}33\,\% & 94{,}42\,\% & 97{,}44\,\%\\
+\hline
+\end{tabular}
+\caption{Efecto de la holgura ($n=1000$).}
+\label{tab:competencia}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{competencia.pdf}
+\caption{Solicitudes inscritas según la holgura.}
+\label{fig:competencia}
+\end{figure}
+
+Incluso con holgura 1{,}5 no se inscribe el 100\,\% porque hay solicitudes
+imposibles: asignaturas cuyas secciones se cruzan entre sí o con las
+franjas no disponibles del estudiante.
+
+\section{Conclusiones}
+
+\begin{itemize}
+\item El problema es NP-difícil, así que no se puede esperar un algoritmo
+exacto y eficiente. La fuerza bruta solo es viable hasta unos 6
+estudiantes.
+\item El voraz por prioridad es muy rápido ($O(n\log n)$) y ya inscribe
+casi todas las solicitudes de prioridad alta, pero por ser miope queda en
+promedio a 2\,\% del óptimo.
+\item La búsqueda local corrige las malas decisiones del voraz: llega al
+óptimo en el 73\,\% de las instancias pequeñas, queda en promedio a
+0{,}77\,\% de él, y mejora $f$ en cerca de 3{,}5\,\% en las instancias
+grandes, resolviendo 5000 estudiantes en menos de un minuto.
+\item La búsqueda local se queda en óptimos locales. Como trabajo futuro,
+se podrían escapar de ellos con recocido simulado o búsqueda tabú, o
+comparar contra un modelo de programación entera resuelto con un
+\emph{solver}.
+\end{itemize}
+
+\appendix
+\section{Ejecución}
+
+El código está en
+\url{https://github.com/DiegoMC19/Proyecto-Analisis-Algoritmos}.
+Los comandos principales son:
+
+\begin{itemize}
+\item \texttt{python -m unittest discover -s tests -t .} (pruebas)
+\item \texttt{python generar.py -n 1000 --semilla 42} (generar una instancia)
+\item \texttt{python resolver.py datos/instancias/inst\_n1000\_s42.json} (ejecutar el algoritmo)
+\item \texttt{python verificar.py} \textit{instancia salida} (verificar una salida)
+\item \texttt{python fuerza\_bruta.py datos/instancias/caso1.json} (óptimo de una instancia pequeña)
+\item \texttt{python experimentos.py} y \texttt{python graficas.py} (experimentos)
+\end{itemize}
+
+\end{document}
