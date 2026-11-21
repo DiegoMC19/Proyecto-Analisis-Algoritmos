@@ -1,0 +1,13 @@
+{
+  "instancia": "caso5.json",
+  "origen": "manual",
+  "optimo": true,
+  "descripcion": "Dos secciones iguales de la misma asignatura salvo el profesor, con afinidad 2 y -2: queda en la de afinidad 2.",
+  "asignacion": [
+    {
+      "estudiante": "E0001",
+      "seccion": "G001"
+    }
+  ],
+  "f": 34
+}

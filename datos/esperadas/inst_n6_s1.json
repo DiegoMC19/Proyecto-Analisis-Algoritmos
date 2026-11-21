@@ -1,0 +1,70 @@
+{
+  "instancia": "inst_n6_s1.json",
+  "origen": "fuerza_bruta",
+  "optimo": true,
+  "asignacion": [
+    {
+      "estudiante": "E0001",
+      "seccion": "G001"
+    },
+    {
+      "estudiante": "E0001",
+      "seccion": "G004"
+    },
+    {
+      "estudiante": "E0002",
+      "seccion": "G004"
+    },
+    {
+      "estudiante": "E0002",
+      "seccion": "G008"
+    },
+    {
+      "estudiante": "E0002",
+      "seccion": "G011"
+    },
+    {
+      "estudiante": "E0003",
+      "seccion": "G003"
+    },
+    {
+      "estudiante": "E0003",
+      "seccion": "G005"
+    },
+    {
+      "estudiante": "E0003",
+      "seccion": "G011"
+    },
+    {
+      "estudiante": "E0004",
+      "seccion": "G009"
+    },
+    {
+      "estudiante": "E0004",
+      "seccion": "G010"
+    },
+    {
+      "estudiante": "E0005",
+      "seccion": "G003"
+    },
+    {
+      "estudiante": "E0005",
+      "seccion": "G007"
+    },
+    {
+      "estudiante": "E0005",
+      "seccion": "G010"
+    },
+    {
+      "estudiante": "E0006",
+      "seccion": "G003"
+    }
+  ],
+  "f": 514,
+  "estadisticas": {
+    "espacio": 45349632,
+    "nodos": 4278268,
+    "hojas": 2253780,
+    "tiempo_s": 9.0505
+  }
+}

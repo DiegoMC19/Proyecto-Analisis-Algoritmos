@@ -1,0 +1,26 @@
+{
+  "instancia": "ejemplo.json",
+  "origen": "fuerza_bruta",
+  "optimo": true,
+  "asignacion": [
+    {
+      "estudiante": "E0001",
+      "seccion": "G001"
+    },
+    {
+      "estudiante": "E0001",
+      "seccion": "G002"
+    },
+    {
+      "estudiante": "E0002",
+      "seccion": "G001"
+    }
+  ],
+  "f": 116.154,
+  "estadisticas": {
+    "espacio": 8,
+    "nodos": 15,
+    "hojas": 8,
+    "tiempo_s": 0.0001
+  }
+}

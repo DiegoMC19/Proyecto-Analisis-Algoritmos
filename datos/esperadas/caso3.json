@@ -1,0 +1,8 @@
+{
+  "instancia": "caso3.json",
+  "origen": "manual",
+  "optimo": true,
+  "descripcion": "La única sección de la asignatura es en una franja en la que el estudiante no puede: no se inscribe.",
+  "asignacion": [],
+  "f": 0
+}

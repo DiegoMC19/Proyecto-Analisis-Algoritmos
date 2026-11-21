@@ -1,0 +1,181 @@
+{
+  "meta": {
+    "version": "1.0",
+    "caso": 6
+  },
+  "franjas": {
+    "dias": [
+      "LU",
+      "MA",
+      "MI",
+      "JU",
+      "VI"
+    ],
+    "bloques": 6
+  },
+  "pesos": {
+    "w1": 10,
+    "w2": 2,
+    "w3": 1,
+    "w4": 1,
+    "w5": 0.01
+  },
+  "asignaturas": [
+    {
+      "id": "A01"
+    },
+    {
+      "id": "A02"
+    }
+  ],
+  "profesores": [
+    {
+      "id": "P01"
+    },
+    {
+      "id": "P02"
+    },
+    {
+      "id": "P03"
+    }
+  ],
+  "edificios": [
+    {
+      "id": "B1",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "id": "B2",
+      "x": 300.0,
+      "y": 0.0
+    }
+  ],
+  "salones": [
+    {
+      "id": "S01",
+      "edificio": "B1"
+    },
+    {
+      "id": "S02",
+      "edificio": "B1"
+    },
+    {
+      "id": "S03",
+      "edificio": "B2"
+    }
+  ],
+  "distancias": [
+    [
+      0,
+      20,
+      300
+    ],
+    [
+      20,
+      0,
+      300
+    ],
+    [
+      300,
+      300,
+      0
+    ]
+  ],
+  "secciones": [
+    {
+      "id": "G001",
+      "asignatura": "A01",
+      "profesor": "P01",
+      "salon": "S01",
+      "franjas": [
+        [
+          "LU",
+          1
+        ],
+        [
+          "LU",
+          2
+        ],
+        [
+          "MI",
+          1
+        ],
+        [
+          "MI",
+          2
+        ]
+      ],
+      "cupo": 5
+    },
+    {
+      "id": "G002",
+      "asignatura": "A02",
+      "profesor": "P02",
+      "salon": "S02",
+      "franjas": [
+        [
+          "LU",
+          3
+        ],
+        [
+          "LU",
+          4
+        ],
+        [
+          "MI",
+          3
+        ],
+        [
+          "MI",
+          4
+        ]
+      ],
+      "cupo": 5
+    },
+    {
+      "id": "G003",
+      "asignatura": "A02",
+      "profesor": "P03",
+      "salon": "S03",
+      "franjas": [
+        [
+          "LU",
+          3
+        ],
+        [
+          "LU",
+          4
+        ],
+        [
+          "MI",
+          3
+        ],
+        [
+          "MI",
+          4
+        ]
+      ],
+      "cupo": 5
+    }
+  ],
+  "estudiantes": [
+    {
+      "id": "E0001",
+      "solicitudes": [
+        {
+          "asignatura": "A01",
+          "prioridad": 5
+        },
+        {
+          "asignatura": "A02",
+          "prioridad": 3
+        }
+      ],
+      "no_disponibles": [],
+      "libres": [],
+      "companeros": [],
+      "afinidad": {}
+    }
+  ]
+}

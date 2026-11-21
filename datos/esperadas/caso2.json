@@ -1,0 +1,13 @@
+{
+  "instancia": "caso2.json",
+  "origen": "manual",
+  "optimo": true,
+  "descripcion": "Una sección con cupo 1 que piden dos estudiantes con prioridades 5 y 2: el cupo queda para el de prioridad 5.",
+  "asignacion": [
+    {
+      "estudiante": "E0001",
+      "seccion": "G001"
+    }
+  ],
+  "f": 50
+}

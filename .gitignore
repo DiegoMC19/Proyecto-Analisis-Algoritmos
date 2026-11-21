@@ -1,0 +1,19 @@
+# Material de la materia (cada uno lo tiene)
+Diapositivas y material de estudio/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Salidas que se regeneran con resolver.py
+resultados/voraz/
+resultados/voraz_bl/
+resultados/experimentos/log.txt
+
+# Editores y sistema
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

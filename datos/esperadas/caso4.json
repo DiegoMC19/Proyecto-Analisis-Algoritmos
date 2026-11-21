@@ -1,0 +1,17 @@
+{
+  "instancia": "caso4.json",
+  "origen": "manual",
+  "optimo": true,
+  "descripcion": "Dos amigos piden la misma asignatura y hay dos secciones iguales salvo el horario. E0001 quiere el martes libre, así que prefiere G001; a E0002 le da igual, pero por su amigo queda también en G001.",
+  "asignacion": [
+    {
+      "estudiante": "E0001",
+      "seccion": "G001"
+    },
+    {
+      "estudiante": "E0002",
+      "seccion": "G001"
+    }
+  ],
+  "f": 62
+}

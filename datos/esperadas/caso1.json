@@ -1,0 +1,13 @@
+{
+  "instancia": "caso1.json",
+  "origen": "manual",
+  "optimo": true,
+  "descripcion": "Dos asignaturas cuyas únicas secciones se cruzan, con prioridades 4 y 2: solo queda inscrito en la de prioridad 4.",
+  "asignacion": [
+    {
+      "estudiante": "E0001",
+      "seccion": "G001"
+    }
+  ],
+  "f": 40
+}

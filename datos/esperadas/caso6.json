@@ -1,0 +1,17 @@
+{
+  "instancia": "caso6.json",
+  "origen": "manual",
+  "optimo": true,
+  "descripcion": "Después de una clase en el edificio B1, la siguiente asignatura tiene una sección en B1 y otra en B2 a la misma hora: queda en la de B1.",
+  "asignacion": [
+    {
+      "estudiante": "E0001",
+      "seccion": "G001"
+    },
+    {
+      "estudiante": "E0001",
+      "seccion": "G002"
+    }
+  ],
+  "f": 79.6
+}

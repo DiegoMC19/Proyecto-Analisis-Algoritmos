@@ -1,0 +1,42 @@
+{
+  "instancia": "inst_n3_s1.json",
+  "origen": "fuerza_bruta",
+  "optimo": true,
+  "asignacion": [
+    {
+      "estudiante": "E0001",
+      "seccion": "G002"
+    },
+    {
+      "estudiante": "E0001",
+      "seccion": "G003"
+    },
+    {
+      "estudiante": "E0002",
+      "seccion": "G005"
+    },
+    {
+      "estudiante": "E0002",
+      "seccion": "G011"
+    },
+    {
+      "estudiante": "E0003",
+      "seccion": "G001"
+    },
+    {
+      "estudiante": "E0003",
+      "seccion": "G004"
+    },
+    {
+      "estudiante": "E0003",
+      "seccion": "G010"
+    }
+  ],
+  "f": 280.688,
+  "estadisticas": {
+    "espacio": 6561,
+    "nodos": 2808,
+    "hojas": 1540,
+    "tiempo_s": 0.006
+  }
+}

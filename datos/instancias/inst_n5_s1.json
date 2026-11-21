@@ -1,0 +1,945 @@
+{
+  "meta": {
+    "version": "1.0",
+    "semilla": 1,
+    "parametros": {
+      "estudiantes": 5,
+      "semilla": 1,
+      "asignaturas": 5,
+      "profesores": 4,
+      "salones": 2,
+      "edificios": 2,
+      "secciones_por_asignatura": [
+        1,
+        3
+      ],
+      "solicitudes_por_estudiante": [
+        2,
+        3
+      ],
+      "dias": 5,
+      "bloques": 12,
+      "holgura": 0.9,
+      "popularidad": 0.8,
+      "lado_campus": 500.0,
+      "distancia_interna": 20.0,
+      "semestres": 10,
+      "max_companeros": 4,
+      "prob_companero_mismo_semestre": 0.8,
+      "profesores_conocidos": [
+        2,
+        8
+      ],
+      "prob_profesor_de_sus_asignaturas": 0.7,
+      "prob_trabaja": 0.15,
+      "prob_preferencia_libre": 0.5,
+      "pesos": [
+        10,
+        2,
+        1,
+        1,
+        0.01
+      ]
+    }
+  },
+  "franjas": {
+    "dias": [
+      "LU",
+      "MA",
+      "MI",
+      "JU",
+      "VI"
+    ],
+    "bloques": 12
+  },
+  "pesos": {
+    "w1": 10,
+    "w2": 2,
+    "w3": 1,
+    "w4": 1,
+    "w5": 0.01
+  },
+  "asignaturas": [
+    {
+      "id": "A01",
+      "semestre": 3
+    },
+    {
+      "id": "A02",
+      "semestre": 10
+    },
+    {
+      "id": "A03",
+      "semestre": 2
+    },
+    {
+      "id": "A04",
+      "semestre": 5
+    },
+    {
+      "id": "A05",
+      "semestre": 2
+    }
+  ],
+  "profesores": [
+    {
+      "id": "P01"
+    },
+    {
+      "id": "P02"
+    },
+    {
+      "id": "P03"
+    },
+    {
+      "id": "P04"
+    }
+  ],
+  "edificios": [
+    {
+      "id": "B1",
+      "x": 394.4,
+      "y": 46.9
+    },
+    {
+      "id": "B2",
+      "x": 14.2,
+      "y": 417.9
+    }
+  ],
+  "salones": [
+    {
+      "id": "S01",
+      "edificio": "B1"
+    },
+    {
+      "id": "S02",
+      "edificio": "B2"
+    }
+  ],
+  "distancias": [
+    [
+      0.0,
+      531.2
+    ],
+    [
+      531.2,
+      0.0
+    ]
+  ],
+  "secciones": [
+    {
+      "id": "G001",
+      "asignatura": "A01",
+      "profesor": "P01",
+      "salon": "S02",
+      "franjas": [
+        [
+          "LU",
+          5
+        ],
+        [
+          "LU",
+          6
+        ],
+        [
+          "MI",
+          5
+        ],
+        [
+          "MI",
+          6
+        ]
+      ],
+      "cupo": 1
+    },
+    {
+      "id": "G002",
+      "asignatura": "A01",
+      "profesor": "P03",
+      "salon": "S01",
+      "franjas": [
+        [
+          "LU",
+          3
+        ],
+        [
+          "LU",
+          4
+        ],
+        [
+          "MI",
+          3
+        ],
+        [
+          "MI",
+          4
+        ]
+      ],
+      "cupo": 1
+    },
+    {
+      "id": "G003",
+      "asignatura": "A02",
+      "profesor": "P03",
+      "salon": "S02",
+      "franjas": [
+        [
+          "MI",
+          1
+        ],
+        [
+          "MI",
+          2
+        ],
+        [
+          "VI",
+          1
+        ],
+        [
+          "VI",
+          2
+        ]
+      ],
+      "cupo": 1
+    },
+    {
+      "id": "G004",
+      "asignatura": "A02",
+      "profesor": "P04",
+      "salon": "S02",
+      "franjas": [
+        [
+          "LU",
+          3
+        ],
+        [
+          "LU",
+          4
+        ],
+        [
+          "MI",
+          3
+        ],
+        [
+          "MI",
+          4
+        ]
+      ],
+      "cupo": 1
+    },
+    {
+      "id": "G005",
+      "asignatura": "A03",
+      "profesor": "P04",
+      "salon": "S01",
+      "franjas": [
+        [
+          "MI",
+          11
+        ],
+        [
+          "MI",
+          12
+        ],
+        [
+          "VI",
+          11
+        ],
+        [
+          "VI",
+          12
+        ]
+      ],
+      "cupo": 3
+    },
+    {
+      "id": "G006",
+      "asignatura": "A03",
+      "profesor": "P04",
+      "salon": "S01",
+      "franjas": [
+        [
+          "MI",
+          1
+        ],
+        [
+          "MI",
+          2
+        ],
+        [
+          "VI",
+          1
+        ],
+        [
+          "VI",
+          2
+        ]
+      ],
+      "cupo": 3
+    },
+    {
+      "id": "G007",
+      "asignatura": "A04",
+      "profesor": "P03",
+      "salon": "S01",
+      "franjas": [
+        [
+          "MA",
+          11
+        ],
+        [
+          "MA",
+          12
+        ],
+        [
+          "JU",
+          11
+        ],
+        [
+          "JU",
+          12
+        ]
+      ],
+      "cupo": 1
+    },
+    {
+      "id": "G008",
+      "asignatura": "A04",
+      "profesor": "P04",
+      "salon": "S02",
+      "franjas": [
+        [
+          "MA",
+          1
+        ],
+        [
+          "MA",
+          2
+        ],
+        [
+          "JU",
+          1
+        ],
+        [
+          "JU",
+          2
+        ]
+      ],
+      "cupo": 1
+    },
+    {
+      "id": "G009",
+      "asignatura": "A04",
+      "profesor": "P04",
+      "salon": "S01",
+      "franjas": [
+        [
+          "LU",
+          5
+        ],
+        [
+          "LU",
+          6
+        ],
+        [
+          "MI",
+          5
+        ],
+        [
+          "MI",
+          6
+        ]
+      ],
+      "cupo": 1
+    },
+    {
+      "id": "G010",
+      "asignatura": "A05",
+      "profesor": "P03",
+      "salon": "S01",
+      "franjas": [
+        [
+          "MA",
+          1
+        ],
+        [
+          "MA",
+          2
+        ],
+        [
+          "JU",
+          1
+        ],
+        [
+          "JU",
+          2
+        ]
+      ],
+      "cupo": 3
+    },
+    {
+      "id": "G011",
+      "asignatura": "A05",
+      "profesor": "P04",
+      "salon": "S01",
+      "franjas": [
+        [
+          "MI",
+          7
+        ],
+        [
+          "MI",
+          8
+        ],
+        [
+          "VI",
+          7
+        ],
+        [
+          "VI",
+          8
+        ]
+      ],
+      "cupo": 2
+    }
+  ],
+  "estudiantes": [
+    {
+      "id": "E0001",
+      "semestre": 3,
+      "solicitudes": [
+        {
+          "asignatura": "A03",
+          "prioridad": 1
+        },
+        {
+          "asignatura": "A01",
+          "prioridad": 3
+        },
+        {
+          "asignatura": "A05",
+          "prioridad": 5
+        }
+      ],
+      "no_disponibles": [
+        [
+          "LU",
+          7
+        ],
+        [
+          "LU",
+          8
+        ],
+        [
+          "LU",
+          9
+        ],
+        [
+          "LU",
+          10
+        ],
+        [
+          "LU",
+          11
+        ],
+        [
+          "LU",
+          12
+        ],
+        [
+          "MA",
+          7
+        ],
+        [
+          "MA",
+          8
+        ],
+        [
+          "MA",
+          9
+        ],
+        [
+          "MA",
+          10
+        ],
+        [
+          "MA",
+          11
+        ],
+        [
+          "MA",
+          12
+        ],
+        [
+          "MI",
+          7
+        ],
+        [
+          "MI",
+          8
+        ],
+        [
+          "MI",
+          9
+        ],
+        [
+          "MI",
+          10
+        ],
+        [
+          "MI",
+          11
+        ],
+        [
+          "MI",
+          12
+        ],
+        [
+          "JU",
+          7
+        ],
+        [
+          "JU",
+          8
+        ],
+        [
+          "JU",
+          9
+        ],
+        [
+          "JU",
+          10
+        ],
+        [
+          "JU",
+          11
+        ],
+        [
+          "JU",
+          12
+        ],
+        [
+          "VI",
+          7
+        ],
+        [
+          "VI",
+          8
+        ],
+        [
+          "VI",
+          9
+        ],
+        [
+          "VI",
+          10
+        ],
+        [
+          "VI",
+          11
+        ],
+        [
+          "VI",
+          12
+        ]
+      ],
+      "libres": [],
+      "companeros": [
+        "E0002",
+        "E0003",
+        "E0005"
+      ],
+      "afinidad": {
+        "P01": 1
+      }
+    },
+    {
+      "id": "E0002",
+      "semestre": 10,
+      "solicitudes": [
+        {
+          "asignatura": "A05",
+          "prioridad": 2
+        },
+        {
+          "asignatura": "A01",
+          "prioridad": 3
+        },
+        {
+          "asignatura": "A03",
+          "prioridad": 4
+        }
+      ],
+      "no_disponibles": [],
+      "libres": [
+        [
+          "LU",
+          7
+        ],
+        [
+          "LU",
+          8
+        ],
+        [
+          "LU",
+          9
+        ],
+        [
+          "LU",
+          10
+        ],
+        [
+          "LU",
+          11
+        ],
+        [
+          "LU",
+          12
+        ],
+        [
+          "MA",
+          7
+        ],
+        [
+          "MA",
+          8
+        ],
+        [
+          "MA",
+          9
+        ],
+        [
+          "MA",
+          10
+        ],
+        [
+          "MA",
+          11
+        ],
+        [
+          "MA",
+          12
+        ],
+        [
+          "MI",
+          7
+        ],
+        [
+          "MI",
+          8
+        ],
+        [
+          "MI",
+          9
+        ],
+        [
+          "MI",
+          10
+        ],
+        [
+          "MI",
+          11
+        ],
+        [
+          "MI",
+          12
+        ],
+        [
+          "JU",
+          7
+        ],
+        [
+          "JU",
+          8
+        ],
+        [
+          "JU",
+          9
+        ],
+        [
+          "JU",
+          10
+        ],
+        [
+          "JU",
+          11
+        ],
+        [
+          "JU",
+          12
+        ],
+        [
+          "VI",
+          7
+        ],
+        [
+          "VI",
+          8
+        ],
+        [
+          "VI",
+          9
+        ],
+        [
+          "VI",
+          10
+        ],
+        [
+          "VI",
+          11
+        ],
+        [
+          "VI",
+          12
+        ]
+      ],
+      "companeros": [
+        "E0001"
+      ],
+      "afinidad": {
+        "P01": 1,
+        "P03": 2,
+        "P04": -1
+      }
+    },
+    {
+      "id": "E0003",
+      "semestre": 9,
+      "solicitudes": [
+        {
+          "asignatura": "A05",
+          "prioridad": 5
+        },
+        {
+          "asignatura": "A03",
+          "prioridad": 4
+        }
+      ],
+      "no_disponibles": [],
+      "libres": [
+        [
+          "VI",
+          1
+        ],
+        [
+          "VI",
+          2
+        ],
+        [
+          "VI",
+          3
+        ],
+        [
+          "VI",
+          4
+        ],
+        [
+          "VI",
+          5
+        ],
+        [
+          "VI",
+          6
+        ],
+        [
+          "VI",
+          7
+        ],
+        [
+          "VI",
+          8
+        ],
+        [
+          "VI",
+          9
+        ],
+        [
+          "VI",
+          10
+        ],
+        [
+          "VI",
+          11
+        ],
+        [
+          "VI",
+          12
+        ]
+      ],
+      "companeros": [
+        "E0001"
+      ],
+      "afinidad": {}
+    },
+    {
+      "id": "E0004",
+      "semestre": 1,
+      "solicitudes": [
+        {
+          "asignatura": "A05",
+          "prioridad": 3
+        },
+        {
+          "asignatura": "A03",
+          "prioridad": 3
+        }
+      ],
+      "no_disponibles": [],
+      "libres": [],
+      "companeros": [],
+      "afinidad": {
+        "P01": 1,
+        "P03": 2
+      }
+    },
+    {
+      "id": "E0005",
+      "semestre": 7,
+      "solicitudes": [
+        {
+          "asignatura": "A04",
+          "prioridad": 4
+        },
+        {
+          "asignatura": "A05",
+          "prioridad": 2
+        },
+        {
+          "asignatura": "A03",
+          "prioridad": 5
+        }
+      ],
+      "no_disponibles": [],
+      "libres": [
+        [
+          "LU",
+          7
+        ],
+        [
+          "LU",
+          8
+        ],
+        [
+          "LU",
+          9
+        ],
+        [
+          "LU",
+          10
+        ],
+        [
+          "LU",
+          11
+        ],
+        [
+          "LU",
+          12
+        ],
+        [
+          "MA",
+          7
+        ],
+        [
+          "MA",
+          8
+        ],
+        [
+          "MA",
+          9
+        ],
+        [
+          "MA",
+          10
+        ],
+        [
+          "MA",
+          11
+        ],
+        [
+          "MA",
+          12
+        ],
+        [
+          "MI",
+          7
+        ],
+        [
+          "MI",
+          8
+        ],
+        [
+          "MI",
+          9
+        ],
+        [
+          "MI",
+          10
+        ],
+        [
+          "MI",
+          11
+        ],
+        [
+          "MI",
+          12
+        ],
+        [
+          "JU",
+          7
+        ],
+        [
+          "JU",
+          8
+        ],
+        [
+          "JU",
+          9
+        ],
+        [
+          "JU",
+          10
+        ],
+        [
+          "JU",
+          11
+        ],
+        [
+          "JU",
+          12
+        ],
+        [
+          "VI",
+          7
+        ],
+        [
+          "VI",
+          8
+        ],
+        [
+          "VI",
+          9
+        ],
+        [
+          "VI",
+          10
+        ],
+        [
+          "VI",
+          11
+        ],
+        [
+          "VI",
+          12
+        ]
+      ],
+      "companeros": [
+        "E0001"
+      ],
+      "afinidad": {
+        "P01": 1,
+        "P03": 2
+      }
+    }
+  ]
+}

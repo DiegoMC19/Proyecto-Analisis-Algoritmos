@@ -1,0 +1,533 @@
+\documentclass{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[spanish,es-tabla]{babel}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{float}
+\usepackage{array}
+
+\theoremstyle{definition}
+\newtheorem*{defn*}{Definición}
+
+\lstdefinestyle{json}{
+  basicstyle=\ttfamily\footnotesize,
+  frame=single,
+  breaklines=true,
+  columns=fullflexible,
+  keepspaces=true,
+  showstringspaces=false,
+  xleftmargin=0.5em,
+  xrightmargin=0.5em
+}
+\lstset{style=json}
+\renewcommand{\lstlistingname}{Código}
+
+\title{Asignación de Horarios Estudiantiles}
+\author{}
+\date{21 de octubre de 2026}
+
+\begin{document}
+
+\begin{titlepage}
+    \centering
+    \vspace*{1cm}
+    \includegraphics[height=3.5cm]{Logo_Javeriana.png}\\[1cm]
+
+    {\large \textbf{FACULTAD DE INGENIERÍA}}\\[0.2cm]
+    {\large \textbf{DEPARTAMENTO DE INGENIERÍA DE SISTEMAS}}\\[1.5cm]
+
+    {\large \textbf{Análisis de Algoritmos}}\\[0.2cm]
+    Profesor: Andrés Moreno Barbosa, PhD\\[1.5cm]
+
+    {\Huge Proyecto - Entrega 1}\\[0.4cm]
+    Asignación de horarios estudiantiles\\[2cm]
+
+    Presentado por:\\[0.3cm]
+    Juan Diego Ariza Lopez\\[0.2cm]
+    Diego Alejandro Mendoza Cruz\\[2cm]
+
+    Bogotá D.C., Colombia\\[0.2cm]
+    21 de Octubre de 2026
+\end{titlepage}
+
+\maketitle
+
+\begin{abstract}
+En este documento se presenta el análisis y diseño del problema de
+asignación de horarios estudiantiles, que es la primera entrega del
+proyecto. Primero formalizamos el problema, después escribimos el diseño
+del algoritmo en términos de sus entradas y salidas, y por último
+explicamos cómo vamos a generar los datos para probar y evaluar el
+algoritmo que se implementará en la segunda entrega, junto con la
+estructura de los archivos en los que se guardan esos datos.
+\end{abstract}
+
+\part{Análisis y diseño del problema}
+
+\section{Análisis}
+
+Dado un conjunto de estudiantes $E=\{e_{1},\dots,e_{n}\}$ y un conjunto
+de secciones $G=\{g_{1},\dots,g_{k}\}$ de las asignaturas
+$A=\{a_{1},\dots,a_{m}\}$, determinar en qué sección de cada asignatura
+que pidió queda inscrito cada estudiante, de forma que todos los horarios
+sean válidos y se cumplan lo mejor posible los criterios de prioridad,
+afinidad con el profesor, compañeros, tiempo libre y cercanía entre
+salones.
+
+Sean $F=D\times H$ el conjunto de franjas de la semana, donde $D$ son los
+días y $H=\{1,\dots,h\}$ los bloques de cada día, $P$ el conjunto de
+profesores y $S$ el conjunto de salones. Cada sección es una
+tupla $g=\langle a_{g},p_{g},s_{g},F_{g},c_{g}\rangle$, donde
+$a_{g}\in A$ es la asignatura, $p_{g}\in P$ el profesor, $s_{g}\in S$ el
+salón, $F_{g}\subseteq F$ las franjas en las que se dicta y
+$c_{g}\in\mathbb{Z}^{+}$ el cupo. Entre los salones existe una distancia
+$\delta:S\times S\rightarrow\mathbb{R}_{\geq0}$. Cada estudiante es una
+tupla $e=\langle R_{e},\pi_{e},N_{e},L_{e},C_{e},\varphi_{e}\rangle$,
+donde $R_{e}\subseteq A$ son las asignaturas que pide,
+$\pi_{e}(a)\in\{1,\dots,5\}$ la prioridad de cada $a\in R_{e}$,
+$N_{e}\subseteq F$ las franjas en las que no puede asistir,
+$L_{e}\subseteq F$ las franjas que quiere tener libres, $C_{e}\subseteq E$
+sus amigos o compañeros de trabajo y $\varphi_{e}:P\rightarrow\{-2,\dots,2\}$
+su afinidad con cada profesor.
+
+Sea $X\subseteq E\times G$ una asignación, donde $(e,g)\in X$ indica que
+el estudiante $e$ queda inscrito en la sección $g$, y sea
+$G_{X}(e)=\{g\in G\mid(e,g)\in X\}$ el conjunto de secciones de $e$. Para
+que $X$ sea válida debe cumplir:
+\begin{align}
+a_{g} & \in R_{e} &  & \forall_{(e,g)\in X}\label{eq:pedidas}\\
+a_{g}\neq a_{g'}\wedge F_{g}\cap F_{g'} & =\emptyset &  & \forall_{e\in E,\ g\neq g'\in G_{X}(e)}\label{eq:cruces}\\
+F_{g}\cap N_{e} & =\emptyset &  & \forall_{(e,g)\in X}\label{eq:disp}\\
+\left|\{e\in E\mid(e,g)\in X\}\right| & \leq c_{g} &  & \forall_{g\in G}\label{eq:cupo}
+\end{align}
+es decir, un estudiante solo se inscribe en asignaturas que pidió
+\eqref{eq:pedidas}, no repite asignatura ni tiene clases que se crucen
+\eqref{eq:cruces}, no tiene clase cuando no puede asistir \eqref{eq:disp}
+y ninguna sección supera su cupo \eqref{eq:cupo}.
+
+Sea $O_{X}(e)=\bigcup_{g\in G_{X}(e)}F_{g}$ el conjunto de franjas
+ocupadas de $e$. Los criterios se miden sobre $X$ así:
+\begin{align*}
+f_{1}(X) & =\sum_{(e,g)\in X}\pi_{e}(a_{g})\\
+f_{2}(X) & =\sum_{(e,g)\in X}\varphi_{e}(p_{g})\\
+f_{3}(X) & =\left|\{(e,e',g)\mid e'\in C_{e},\ (e,g)\in X,\ (e',g)\in X\}\right|\\
+f_{4}(X) & =\sum_{e\in E}\left|L_{e}\cap O_{X}(e)\right|\\
+f_{5}(X) & =\sum_{e\in E}\sum_{\substack{g,g'\in G_{X}(e)\\
+g\neq g'}}\delta(s_{g},s_{g'})\cdot\left|\{(d,b)\in F_{g}\mid(d,b+1)\in F_{g'}\}\right|
+\end{align*}
+donde $f_{1}$ es la prioridad de lo que quedó inscrito, $f_{2}$ la
+afinidad con los profesores, $f_{3}$ el número de veces que un estudiante
+queda en la misma sección que un compañero, $f_{4}$ el número de franjas
+que se querían libres y quedaron ocupadas, y $f_{5}$ la distancia que
+caminan los estudiantes entre dos clases seguidas (bloque $b$ y bloque
+$b+1$ del mismo día). Dados unos pesos $w_{1},\dots,w_{5}\geq0$, se
+quiere obtener
+\[
+\max\ f(X)=w_{1}f_{1}(X)+w_{2}f_{2}(X)+w_{3}f_{3}(X)-w_{4}f_{4}(X)-w_{5}f_{5}(X)
+\]
+sobre las asignaciones $X$ que cumplan con estas restricciones. Los
+términos $f_{4}$ y $f_{5}$ restan porque son cosas que se quieren evitar,
+y $w_{1}$ debería ser el peso más grande, porque poder cursar una
+asignatura que se necesita es más importante que los demás criterios.
+
+\section{Diseño}
+
+\begin{defn*}[Entradas:]
+\begin{enumerate}
+\item Franjas $F=D\times H$, con $D$ los días y $H=\{1,\dots,h\}$ los
+bloques de cada día.
+\item Asignaturas $A=\{a_{1},\dots,a_{m}\}$ y profesores $P$.
+\item Salones $S$ y distancia $\delta:S\times S\rightarrow\mathbb{R}_{\geq0}$,
+con $\delta(s,s)=0$ y $\delta(s,s')=\delta(s',s)$.
+\item Secciones $G=\{g_{1},\dots,g_{k}\}$, con
+$g=\langle a_{g},p_{g},s_{g},F_{g},c_{g}\rangle$, $a_{g}\in A$,
+$p_{g}\in P$, $s_{g}\in S$, $\emptyset\neq F_{g}\subseteq F$ y
+$c_{g}\in\mathbb{Z}^{+}$.
+\item Estudiantes $E=\{e_{1},\dots,e_{n}\}$, con
+$e=\langle R_{e},\pi_{e},N_{e},L_{e},C_{e},\varphi_{e}\rangle$,
+$R_{e}\subseteq A$, $\pi_{e}:R_{e}\rightarrow\{1,\dots,5\}$,
+$N_{e}\subseteq F$, $L_{e}\subseteq F\setminus N_{e}$,
+$C_{e}\subseteq E\setminus\{e\}$ y $\varphi_{e}:P\rightarrow\{-2,\dots,2\}$.
+\item Pesos $w_{1},\dots,w_{5}\in\mathbb{R}_{\geq0}$.
+\end{enumerate}
+\end{defn*}
+
+\begin{defn*}[Salidas:]
+\begin{enumerate}
+\item Una asignación $X\subseteq E\times G$ que cumple las restricciones
+\eqref{eq:pedidas}, \eqref{eq:cruces}, \eqref{eq:disp} y \eqref{eq:cupo}, y
+tal que $f(X)\geq f(X')$ para toda asignación $X'\subseteq E\times G$ que
+también las cumpla.
+\end{enumerate}
+\end{defn*}
+
+\part{Estrategia de datos}
+
+\section{Generación de las entradas}
+
+Los datos reales que necesita el problema, como los amigos de cada
+estudiante o qué profesores le gustan, no son públicos y además son datos
+personales. Por eso decidimos crear los datos con un generador, que es un
+programa que construye instancias aleatorias que cumplen con las entradas
+del diseño. El generador recibe unos parámetros (número de estudiantes,
+asignaturas, secciones por asignatura, salones, días y bloques, entre
+otros) y una semilla, de modo que con los mismos parámetros y la misma
+semilla siempre se obtiene la misma instancia. Cada parte de la entrada se
+genera así:
+
+\begin{itemize}
+\item \textbf{Salones y distancias:} se ubican algunos edificios en puntos
+aleatorios de un plano (por ejemplo, un cuadrado de 500 m de lado) y cada
+salón pertenece a un edificio. La distancia entre salones es la distancia
+entre sus edificios, o un valor pequeño si están en el mismo edificio.
+\item \textbf{Secciones:} cada asignatura tiene entre 1 y 4 secciones. A
+cada sección se le da un horario parecido a los de la universidad (por
+ejemplo, dos sesiones de dos horas, lunes y miércoles o martes y jueves),
+un salón y un profesor que estén libres en esas franjas, para que un salón
+o un profesor no queden en dos clases al mismo tiempo, y un cupo aleatorio
+dentro de un rango.
+\item \textbf{Solicitudes:} cada estudiante pide entre 3 y 6 asignaturas.
+Hacemos que unas asignaturas sean más populares que otras para que haya
+competencia por los cupos, y la prioridad de cada una es un número
+aleatorio de 1 a 5.
+\item \textbf{Compañeros:} los estudiantes se agrupan por semestre y es más
+probable que dos estudiantes sean amigos si están en el mismo grupo.
+\item \textbf{Afinidad:} cada profesor tiene una ``reputación'' aleatoria y
+las calificaciones de los estudiantes salen cerca de ese valor, así varios
+estudiantes coinciden en qué profesores les gustan. Si el estudiante no
+conoce al profesor, la afinidad es 0.
+\item \textbf{Franjas no disponibles y libres:} algunos estudiantes
+trabajan y tienen bloqueado un rango de horas (por ejemplo, las mañanas de
+lunes a viernes). Las franjas que prefieren libres se escogen con patrones
+como ``viernes libre'' o ``tardes libres''.
+\end{itemize}
+
+Las instancias se guardan en archivos JSON junto con los parámetros y la
+semilla con que se generaron, con la estructura que se define en la
+Sección \ref{sec:estructura}. Cambiando los parámetros se pueden hacer
+instancias más fáciles o más difíciles, por ejemplo poniendo menos cupos de
+los que se piden para que haya más competencia.
+
+\section{Estructura de los datos}\label{sec:estructura}
+
+Todos los datos del proyecto se guardan en archivos JSON de tres tipos: el
+\emph{archivo de instancia}, que es la entrada del algoritmo; el
+\emph{archivo de salida}, que es lo que devuelve el algoritmo; y el
+\emph{archivo de salida esperada}, contra el que se compara. Los tres
+siguen la notación del diseño (Sección 2), de modo que cada campo
+corresponde a un elemento de las entradas o de las salidas. Todos los
+elementos (asignaturas, profesores, salones, secciones y estudiantes) tienen
+un identificador \texttt{id} único, y las relaciones entre ellos se
+escriben como referencias a esos identificadores, sin repetir los datos.
+
+\subsection{Archivo de instancia}
+
+La Tabla \ref{tab:mapeo} muestra cómo se representa cada elemento de las
+entradas, y el Código \ref{lst:instancia} es una instancia completa
+pequeña, con dos estudiantes, dos asignaturas y dos salones.
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{|>{\raggedright\arraybackslash}p{2.3cm}|>{\raggedright\arraybackslash}p{3.0cm}|>{\raggedright\arraybackslash}p{5.4cm}|}
+\hline
+Elemento formal & Campo JSON & Representación\\
+\hline
+$F=D\times H$ & \texttt{franjas} & \texttt{dias} es la lista $D$ y
+\texttt{bloques} es $h$. Una franja $(d,b)$ se escribe como el par
+\lstinline|["LU", 1]|, con $b\in\{1,\dots,h\}$.\\
+\hline
+$A$, $P$ & \texttt{asignaturas}, \texttt{profesores} & Listas de objetos
+con \texttt{id} único.\\
+\hline
+$S$ & \texttt{salones} & Lista de objetos con \texttt{id}. La posición
+$i$ de cada salón en la lista (desde 0) es su índice $s_{i}$.\\
+\hline
+$\delta$ & \texttt{distancias} & Matriz $|S|\times|S|$ de números reales
+en metros, con \texttt{distancias[i][j]} $=\delta(s_{i},s_{j})$.\\
+\hline
+$g=\langle a_{g},p_{g},s_{g},F_{g},c_{g}\rangle$ & cada elemento de
+\texttt{secciones} & \texttt{asignatura}, \texttt{profesor} y
+\texttt{salon} son \texttt{id}; \texttt{franjas} es la lista $F_{g}$ y
+\texttt{cupo} es $c_{g}$.\\
+\hline
+$R_{e}$, $\pi_{e}$ & \texttt{solicitudes} & Lista de pares (asignatura,
+prioridad). $R_{e}$ son las asignaturas de la lista y $\pi_{e}(a)$ la
+prioridad de $a$.\\
+\hline
+$N_{e}$, $L_{e}$ & \texttt{no\_disponibles}, \texttt{libres} & Listas de
+franjas.\\
+\hline
+$C_{e}$ & \texttt{companeros} & Lista de \texttt{id} de estudiantes (lista
+de adyacencia del grafo de amistad).\\
+\hline
+$\varphi_{e}$ & \texttt{afinidad} & Diccionario de \texttt{id} de profesor
+a un valor en $\{-2,\dots,2\}$. Si un profesor no aparece,
+$\varphi_{e}(p)=0$.\\
+\hline
+$w_{1},\dots,w_{5}$ & \texttt{pesos} & Objeto con los campos \texttt{w1} a
+\texttt{w5}.\\
+\hline
+\end{tabular}
+\caption{Representación de las entradas en el archivo de instancia.}
+\label{tab:mapeo}
+\end{table}
+
+\noindent\begin{minipage}{\linewidth}
+\begin{lstlisting}[caption={Ejemplo de archivo de instancia.},label={lst:instancia}]
+{
+  "meta": {
+    "version": "1.0",
+    "semilla": 42,
+    "parametros": {
+      "estudiantes": 2, "asignaturas": 2, "secciones_por_asignatura": [1, 1],
+      "edificios": 2, "salones": 2, "dias": 5, "bloques": 7,
+      "solicitudes_por_estudiante": [1, 2], "cupo": [25, 30]
+    }
+  },
+  "franjas": { "dias": ["LU", "MA", "MI", "JU", "VI"], "bloques": 7 },
+  "pesos": { "w1": 10, "w2": 2, "w3": 1, "w4": 1, "w5": 0.01 },
+  "asignaturas": [ { "id": "A01" }, { "id": "A02" } ],
+  "profesores":  [ { "id": "P01" }, { "id": "P02" } ],
+  "edificios": [
+    { "id": "B1", "x": 120.5, "y": 340.0 },
+    { "id": "B2", "x": 410.0, "y": 75.2 }
+  ],
+  "salones": [
+    { "id": "S01", "edificio": "B1" },
+    { "id": "S02", "edificio": "B2" }
+  ],
+  "distancias": [ [0.0, 392.3], [392.3, 0.0] ],
+  "secciones": [
+    { "id": "G001", "asignatura": "A01", "profesor": "P01", "salon": "S01",
+      "franjas": [["LU", 1], ["LU", 2], ["MI", 1], ["MI", 2]], "cupo": 30 },
+    { "id": "G002", "asignatura": "A02", "profesor": "P02", "salon": "S02",
+      "franjas": [["LU", 3], ["LU", 4], ["MI", 3], ["MI", 4]], "cupo": 25 }
+  ],
+  "estudiantes": [
+    { "id": "E0001", "semestre": 3,
+      "solicitudes": [ { "asignatura": "A01", "prioridad": 5 },
+                       { "asignatura": "A02", "prioridad": 3 } ],
+      "no_disponibles": [["VI", 1], ["VI", 2]],
+      "libres": [["VI", 6], ["VI", 7]],
+      "companeros": ["E0002"],
+      "afinidad": { "P01": 2, "P02": -1 } },
+    { "id": "E0002", "semestre": 3,
+      "solicitudes": [ { "asignatura": "A01", "prioridad": 4 } ],
+      "no_disponibles": [],
+      "libres": [],
+      "companeros": ["E0001"],
+      "afinidad": {} }
+  ]
+}
+\end{lstlisting}
+\end{minipage}
+\medskip
+
+Algunas decisiones sobre esta estructura:
+
+\begin{itemize}
+\item Las franjas se escriben como pares (día, bloque) y no como un solo
+número, para que se lean directamente como elementos de $D\times H$. Así,
+dos franjas son consecutivas si tienen el mismo día y bloques $b$ y $b+1$,
+que es lo que usa $f_{5}$.
+\item La distancia $\delta$ se guarda completa como matriz, aunque el
+generador la calcula a partir de las coordenadas de los edificios. De esta
+forma el algoritmo no depende de cómo se generaron los datos, y en los
+casos hechos a mano se puede poner cualquier distancia. Como hay pocos
+salones (cientos), la matriz de $|S|^{2}$ valores no ocupa mucho espacio.
+\item La afinidad $\varphi_{e}$ se guarda de forma dispersa: solo aparecen
+los profesores con afinidad distinta de 0, lo que coincide con la regla
+del generador de que un profesor que el estudiante no conoce vale 0. Así no
+hay que guardar $n\cdot|P|$ valores.
+\item $R_{e}$ y $\pi_{e}$ se guardan juntos en \texttt{solicitudes}, porque
+$\pi_{e}$ solo está definida sobre $R_{e}$.
+\item La relación de compañeros no tiene que ser simétrica, porque
+$C_{e}$ está definida para cada estudiante por separado.
+\item Los campos \texttt{meta}, \texttt{semestre} y \texttt{edificios} no
+son parte de las entradas del diseño. Se guardan para poder reproducir la
+instancia y para analizar los resultados, pero el algoritmo no los usa.
+\end{itemize}
+
+\subsection{Reglas de validez de una instancia}
+
+Antes de ejecutar el algoritmo, un validador revisa que el archivo de
+instancia cumpla las condiciones de la definición de entradas:
+
+\begin{enumerate}
+\item Los \texttt{id} son únicos dentro de cada lista, y toda referencia
+(asignatura, profesor y salón de una sección, edificio de un salón,
+asignaturas de las solicitudes, compañeros y profesores de la afinidad)
+apunta a un \texttt{id} que existe.
+\item \texttt{distancias} es una matriz $|S|\times|S|$ con valores no
+negativos, diagonal en 0 y simétrica.
+\item Toda franja tiene un día que está en \texttt{dias} y un bloque entre
+1 y \texttt{bloques}.
+\item Cada sección tiene al menos una franja, sin repetir, y un cupo entero
+mayor o igual a 1.
+\item En las solicitudes de un estudiante no se repiten asignaturas y las
+prioridades están entre 1 y 5.
+\item $L_{e}\cap N_{e}=\emptyset$ y $e\notin C_{e}$ para todo estudiante.
+\item Las afinidades están entre $-2$ y $2$ y los pesos son mayores o
+iguales a 0.
+\end{enumerate}
+
+\subsection{Archivo de salida}
+
+El algoritmo escribe su respuesta como en el Código \ref{lst:salida}. El
+campo \texttt{asignacion} es la asignación $X$ como lista de pares
+(estudiante, sección), y $G_{X}(e)$ se obtiene juntando los pares de cada
+estudiante. El campo \texttt{no\_asignadas} lista las solicitudes que
+quedaron sin sección; se puede deducir de $X$, pero se guarda para
+facilitar el análisis. El campo \texttt{objetivo} tiene el valor de cada
+criterio y de $f$, y \texttt{tiempo\_ms} el tiempo de ejecución.
+
+\noindent\begin{minipage}{\linewidth}
+\begin{lstlisting}[caption={Salida del algoritmo para la instancia del Código \ref{lst:instancia}.},label={lst:salida}]
+{
+  "instancia": "ejemplo.json",
+  "algoritmo": "nombre_del_algoritmo",
+  "asignacion": [
+    { "estudiante": "E0001", "seccion": "G001" },
+    { "estudiante": "E0001", "seccion": "G002" },
+    { "estudiante": "E0002", "seccion": "G001" }
+  ],
+  "no_asignadas": [],
+  "objetivo": { "f1": 12, "f2": 1, "f3": 2, "f4": 0, "f5": 784.6, "f": 116.154 },
+  "tiempo_ms": 3
+}
+\end{lstlisting}
+\end{minipage}
+\medskip
+
+En este ejemplo, $f_{1}=5+3+4=12$; $f_{2}=2-1+0=1$; $f_{3}=2$, porque
+\texttt{E0001} y \texttt{E0002} son compañeros y quedan en \texttt{G001}
+(se cuenta una vez por cada uno); $f_{4}=0$, porque las franjas libres del
+viernes no quedan ocupadas; y $f_{5}=2\cdot392{,}3=784{,}6$, porque
+\texttt{E0001} pasa de \texttt{S01} a \texttt{S02} el lunes y el miércoles
+del bloque 2 al 3. Con los pesos de la instancia,
+$f=10\cdot12+2\cdot1+1\cdot2-1\cdot0-0{,}01\cdot784{,}6=116{,}154$.
+
+\subsection{Archivo de salida esperada y reporte del verificador}
+
+La salida esperada de cada instancia se guarda como en el Código
+\ref{lst:esperada}. El campo \texttt{origen} dice cómo se obtuvo: a mano
+(\texttt{manual}), probando todas las asignaciones
+(\texttt{fuerza\_bruta}) o \texttt{ninguno} si la instancia es grande y no
+se conoce el óptimo; en ese último caso \texttt{asignacion} y \texttt{f}
+quedan en \texttt{null}.
+
+\noindent\begin{minipage}{\linewidth}
+\begin{lstlisting}[caption={Salida esperada para la instancia del Código \ref{lst:instancia}.},label={lst:esperada}]
+{
+  "instancia": "ejemplo.json",
+  "origen": "fuerza_bruta",
+  "optimo": true,
+  "asignacion": [
+    { "estudiante": "E0001", "seccion": "G001" },
+    { "estudiante": "E0001", "seccion": "G002" },
+    { "estudiante": "E0002", "seccion": "G001" }
+  ],
+  "f": 116.154
+}
+\end{lstlisting}
+\end{minipage}
+\medskip
+
+Como puede haber varias asignaciones óptimas con el mismo valor de $f$, una
+salida se considera correcta si es válida y su valor de $f$ es igual al de
+la salida esperada (con una tolerancia de $10^{-6}$). Solo en los casos
+hechos a mano, que se diseñan para que tengan una única respuesta, se
+compara además la asignación exacta.
+
+Para todas las instancias, el verificador lee la instancia y la salida del
+algoritmo, revisa las restricciones \eqref{eq:pedidas} a \eqref{eq:cupo},
+vuelve a calcular $f$ por su cuenta y escribe un reporte como el del
+Código \ref{lst:reporte}, donde cada violación indica el número de la
+restricción que no se cumple.
+
+\noindent\begin{minipage}{\linewidth}
+\begin{lstlisting}[caption={Ejemplo de reporte del verificador.},label={lst:reporte}]
+{
+  "instancia": "inst_n1000_s7.json",
+  "valida": false,
+  "violaciones": [
+    { "restriccion": 4, "seccion": "G014", "detalle": "31 inscritos, cupo 30" }
+  ],
+  "f_recalculada": 10234.5,
+  "coincide_objetivo": true
+}
+\end{lstlisting}
+\end{minipage}
+\medskip
+
+\subsection{Organización de los archivos}
+
+Las instancias se guardan en la carpeta \texttt{datos/instancias}, las
+salidas esperadas en \texttt{datos/esperadas} con el mismo nombre de la
+instancia, y las salidas de cada algoritmo en
+\texttt{resultados/}\textit{algoritmo}. El nombre de cada instancia
+generada incluye su tamaño y su semilla, por ejemplo
+\texttt{inst\_n100\_s42.json}, y los casos hechos a mano se llaman
+\texttt{caso1.json} a \texttt{caso6.json}.
+
+\section{Salidas esperadas}
+
+Para evaluar el algoritmo, cada instancia necesita una salida esperada
+contra la cual comparar su respuesta. La forma de obtenerla depende del
+tamaño de la instancia.
+
+\textbf{Casos hechos a mano.} Son instancias de uno o dos estudiantes en
+las que la respuesta se conoce de antemano. Cada una prueba una sola
+restricción o criterio del diseño (Tabla \ref{tab:casos}) y se usarán como
+pruebas unitarias.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|c|p{6.5cm}|p{3.8cm}|}
+\hline
+Caso & Situación & Resultado esperado\\
+\hline
+1 & Un estudiante pide dos asignaturas cuyas únicas secciones se cruzan,
+con prioridades 4 y 2. & Solo queda inscrito en la de prioridad 4.\\
+\hline
+2 & Una sección con cupo 1 que piden dos estudiantes, con prioridades 5 y
+2. & El cupo queda para el de prioridad 5.\\
+\hline
+3 & La única sección de una asignatura es en una franja en la que el
+estudiante no puede. & No se inscribe.\\
+\hline
+4 & Dos amigos piden la misma asignatura y hay dos secciones iguales con
+cupo suficiente. & Quedan en la misma sección.\\
+\hline
+5 & Dos secciones iguales de la misma asignatura salvo el profesor, con
+afinidad 2 y $-2$. & Queda en la de afinidad 2.\\
+\hline
+6 & Después de una clase en el edificio A, la siguiente asignatura tiene
+una sección en A y otra en B a la misma hora. & Queda en la del edificio
+A.\\
+\hline
+\end{tabular}
+\caption{Casos de prueba hechos a mano.}
+\label{tab:casos}
+\end{table}
+
+\textbf{Instancias generadas.} En instancias pequeñas la salida esperada
+es la asignación óptima, que se obtiene probando todas las asignaciones
+posibles. Si hay $n$ estudiantes, cada uno pide $q$ asignaturas y cada
+asignatura tiene $t$ secciones, para cada una de las $n\cdot q$ solicitudes
+hay $t+1$ opciones (una de las $t$ secciones o ninguna), así que hay
+$(t+1)^{n\cdot q}$ combinaciones. Por ejemplo, con 4 estudiantes, 3
+asignaturas cada uno y 2 secciones por asignatura hay $3^{12}=531\,441$
+combinaciones. Como este número crece muy rápido, en instancias grandes no
+se puede conocer el óptimo. En ese
+caso un verificador revisa que la salida cumpla las restricciones
+\eqref{eq:pedidas} a \eqref{eq:cupo}, y se mide el valor de $f$ y el
+tiempo de ejecución para distintos tamaños (por ejemplo, 100, 1000 y 5000
+estudiantes).
+
+\end{document}

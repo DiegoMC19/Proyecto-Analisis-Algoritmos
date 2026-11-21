@@ -1,0 +1,22 @@
+{
+  "instancia": "inst_n2_s1.json",
+  "origen": "fuerza_bruta",
+  "optimo": true,
+  "asignacion": [
+    {
+      "estudiante": "E0001",
+      "seccion": "G005"
+    },
+    {
+      "estudiante": "E0002",
+      "seccion": "G007"
+    }
+  ],
+  "f": 90,
+  "estadisticas": {
+    "espacio": 1296,
+    "nodos": 27,
+    "hojas": 9,
+    "tiempo_s": 0.0001
+  }
+}

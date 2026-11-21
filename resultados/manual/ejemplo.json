@@ -1,0 +1,12 @@
+{
+  "instancia": "ejemplo.json",
+  "algoritmo": "manual",
+  "asignacion": [
+    { "estudiante": "E0001", "seccion": "G001" },
+    { "estudiante": "E0001", "seccion": "G002" },
+    { "estudiante": "E0002", "seccion": "G001" }
+  ],
+  "no_asignadas": [],
+  "objetivo": { "f1": 12, "f2": 1, "f3": 2, "f4": 0, "f5": 784.6, "f": 116.154 },
+  "tiempo_ms": 0
+}

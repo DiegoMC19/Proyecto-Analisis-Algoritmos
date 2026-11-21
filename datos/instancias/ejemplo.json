@@ -1,0 +1,45 @@
+{
+  "meta": {
+    "version": "1.0",
+    "semilla": 42,
+    "parametros": {
+      "estudiantes": 2, "asignaturas": 2, "secciones_por_asignatura": [1, 1],
+      "edificios": 2, "salones": 2, "dias": 5, "bloques": 7,
+      "solicitudes_por_estudiante": [1, 2], "cupo": [25, 30]
+    }
+  },
+  "franjas": { "dias": ["LU", "MA", "MI", "JU", "VI"], "bloques": 7 },
+  "pesos": { "w1": 10, "w2": 2, "w3": 1, "w4": 1, "w5": 0.01 },
+  "asignaturas": [ { "id": "A01" }, { "id": "A02" } ],
+  "profesores":  [ { "id": "P01" }, { "id": "P02" } ],
+  "edificios": [
+    { "id": "B1", "x": 120.5, "y": 340.0 },
+    { "id": "B2", "x": 410.0, "y": 75.2 }
+  ],
+  "salones": [
+    { "id": "S01", "edificio": "B1" },
+    { "id": "S02", "edificio": "B2" }
+  ],
+  "distancias": [ [0.0, 392.3], [392.3, 0.0] ],
+  "secciones": [
+    { "id": "G001", "asignatura": "A01", "profesor": "P01", "salon": "S01",
+      "franjas": [["LU", 1], ["LU", 2], ["MI", 1], ["MI", 2]], "cupo": 30 },
+    { "id": "G002", "asignatura": "A02", "profesor": "P02", "salon": "S02",
+      "franjas": [["LU", 3], ["LU", 4], ["MI", 3], ["MI", 4]], "cupo": 25 }
+  ],
+  "estudiantes": [
+    { "id": "E0001", "semestre": 3,
+      "solicitudes": [ { "asignatura": "A01", "prioridad": 5 },
+                       { "asignatura": "A02", "prioridad": 3 } ],
+      "no_disponibles": [["VI", 1], ["VI", 2]],
+      "libres": [["VI", 6], ["VI", 7]],
+      "companeros": ["E0002"],
+      "afinidad": { "P01": 2, "P02": -1 } },
+    { "id": "E0002", "semestre": 3,
+      "solicitudes": [ { "asignatura": "A01", "prioridad": 4 } ],
+      "no_disponibles": [],
+      "libres": [],
+      "companeros": ["E0001"],
+      "afinidad": {} }
+  ]
+}
