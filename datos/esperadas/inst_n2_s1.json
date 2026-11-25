@@ -1,6 +1,6 @@
 {
   "instancia": "inst_n2_s1.json",
-  "origen": "fuerza_bruta",
+  "origen": "backtracking",
   "optimo": true,
   "asignacion": [
     {

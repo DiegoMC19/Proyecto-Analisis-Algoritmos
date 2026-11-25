@@ -5,7 +5,7 @@
 
 ## Calidad contra el óptimo
 
-| n | instancias | espacio (mediana) | nodos FB (mediana) | tiempo FB (mediana) | óptimas voraz | óptimas voraz+BL | brecha voraz | brecha voraz+BL |
+| n | instancias | espacio (mediana) | nodos backtracking (mediana) | tiempo backtracking (mediana) | óptimas voraz | óptimas voraz+BL | brecha voraz | brecha voraz+BL |
 |---|---|---|---|---|---|---|---|---|
 | 3 | 30 | 2,560 | 1,412 | 0.003 s | 14 | 23 | 1.75 % | 0.73 % |
 | 4 | 30 | 27,216 | 8,576 | 0.017 s | 10 | 21 | 1.79 % | 0.68 % |

@@ -24,7 +24,7 @@ CARPETA = Path("resultados/experimentos")
 
 # Paleta (modo claro): un color fijo por algoritmo, siempre el mismo en todas las gráficas.
 COLOR = {"voraz": "#2a78d6", "bl": "#eb6834", "fb": "#1baf7a"}
-NOMBRE = {"voraz": "Voraz", "bl": "Voraz + búsqueda local", "fb": "Fuerza bruta"}
+NOMBRE = {"voraz": "Voraz", "bl": "Voraz + búsqueda local", "fb": "Backtracking"}
 TINTA, TINTA_2, REJILLA = "#0b0b0b", "#52514e", "#e5e4e0"
 
 plt.rcParams.update({
@@ -107,7 +107,7 @@ def grafica_fuerza_bruta(cal):
     ax.set_xticks(ns, [str(int(n)) for n in ns])
     ax.set_xlabel("Número de estudiantes n")
     ax.set_ylabel("Tiempo mediano (s, escala log)")
-    ax.set_title("Fuerza bruta contra el algoritmo en instancias pequeñas")
+    ax.set_title("Backtracking contra la heurística en instancias pequeñas")
     ax.legend(loc="upper left")
     guardar(fig, "fuerza_bruta_vs_algoritmo")
 
@@ -151,7 +151,7 @@ def grafica_competencia(comp):
 def tablas(cal, esc, comp, resumen):
     if cal:
         resumen += ["", "## Calidad contra el óptimo", "",
-                    "| n | instancias | espacio (mediana) | nodos FB (mediana) | tiempo FB (mediana) "
+                    "| n | instancias | espacio (mediana) | nodos backtracking (mediana) | tiempo backtracking (mediana) "
                     "| óptimas voraz | óptimas voraz+BL | brecha voraz | brecha voraz+BL |",
                     "|---|---|---|---|---|---|---|---|---|"]
         for n, fs in por(cal, "n").items():

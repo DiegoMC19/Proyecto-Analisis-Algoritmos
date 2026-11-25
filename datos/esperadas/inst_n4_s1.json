@@ -1,6 +1,6 @@
 {
   "instancia": "inst_n4_s1.json",
-  "origen": "fuerza_bruta",
+  "origen": "backtracking",
   "optimo": true,
   "asignacion": [
     {
@@ -41,6 +41,6 @@
     "espacio": 139968,
     "nodos": 7026,
     "hojas": 3515,
-    "tiempo_s": 0.0139
+    "tiempo_s": 0.0211
   }
 }

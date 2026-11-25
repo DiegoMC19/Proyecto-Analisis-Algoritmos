@@ -1,8 +1,8 @@
 """Experimentos para la sustentación.
 
-    1. Calidad:        instancias pequeñas (n = 3..6) con óptimo por fuerza bruta.
+    1. Calidad:        instancias pequeñas (n = 3..6) con óptimo por backtracking.
                        Brecha del voraz y del voraz + búsqueda local contra el óptimo,
-                       y tiempo de la fuerza bruta contra el del algoritmo.
+                       y tiempo del backtracking contra el de la heurística.
     2. Escalabilidad:  n = 100 ... 5000 con varias semillas. Tiempo, f y
                        solicitudes inscritas.
     3. Competencia:    n = 1000 variando la holgura (cupos / demanda).
@@ -57,7 +57,7 @@ def brecha(optimo: float, f: float) -> float:
 # ----------------------------------------------------------------------------
 
 def experimento_calidad(rapido: bool) -> None:
-    print("1. Calidad contra el óptimo (fuerza bruta)")
+    print("1. Calidad contra el óptimo (backtracking)")
     plan = {3: 30, 4: 30, 5: 30, 6: 10} if not rapido else {3: 5, 4: 5, 5: 3}
     filas = []
     for n, semillas in plan.items():

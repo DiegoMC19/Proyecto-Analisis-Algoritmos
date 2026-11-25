@@ -5,7 +5,7 @@ Uso:
     python fuerza_bruta.py datos/instancias/*.json --limite 20000000
 
 Si la salida esperada ya existe y es de un caso hecho a mano, no se
-sobrescribe: se compara con lo que encontró la fuerza bruta.
+sobrescribe: se compara con lo que encontró el backtracking.
 Las instancias cuyo espacio supera el límite se saltan.
 """
 
@@ -21,7 +21,7 @@ from horarios.verificador import comparar_con_esperada, verificar
 
 def main() -> int:
     sys.stdout.reconfigure(encoding="utf-8")
-    parser = argparse.ArgumentParser(description="Fuerza bruta para instancias pequeñas")
+    parser = argparse.ArgumentParser(description="Backtracking exacto para instancias pequeñas")
     parser.add_argument("instancias", nargs="+")
     parser.add_argument("--limite", type=float, default=LIMITE_POR_DEFECTO,
                         help="máximo de combinaciones del espacio completo")
@@ -51,7 +51,7 @@ def main() -> int:
 
         guardar_json(destino, {
             "instancia": nombre,
-            "origen": "fuerza_bruta",
+            "origen": "backtracking",
             "optimo": True,
             "asignacion": asignacion_a_json(r.asignacion),
             "f": r.objetivo.a_dict()["f"],

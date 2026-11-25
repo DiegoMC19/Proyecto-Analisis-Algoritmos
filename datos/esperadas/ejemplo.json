@@ -1,6 +1,6 @@
 {
   "instancia": "ejemplo.json",
-  "origen": "fuerza_bruta",
+  "origen": "backtracking",
   "optimo": true,
   "asignacion": [
     {

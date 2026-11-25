@@ -103,7 +103,7 @@ class TestRestricciones(unittest.TestCase):
 
 class TestComparacion(unittest.TestCase):
 
-    ESPERADA = {"origen": "fuerza_bruta", "optimo": True, "asignacion": None, "f": 116.154}
+    ESPERADA = {"origen": "backtracking", "optimo": True, "asignacion": None, "f": 116.154}
 
     def test_correcta(self):
         inst = instancia_desde_dict(ejemplo())

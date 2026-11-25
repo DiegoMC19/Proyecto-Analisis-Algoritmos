@@ -24,6 +24,9 @@ generar.py           CLI: genera instancias
 crear_casos.py       CLI: escribe los casos a mano y sus salidas esperadas
 fuerza_bruta.py      CLI: calcula la salida esperada óptima de instancias pequeñas
 resolver.py          CLI: ejecuta el algoritmo, guarda y verifica la salida
+latex.txt            entrega 1 corregida (LaTeX)
+latex_final.txt      documento final completo: diseño, estrategia de datos, algoritmo y resultados (LaTeX)
+GUIA_SUSTENTACION.md guía para preparar la sustentación
 experimentos.py      corre los experimentos (calidad, escalabilidad, competencia) -> CSV
 graficas.py          gráficas PNG/PDF y resumen.md a partir de los CSV (requiere matplotlib)
 validar.py           CLI: valida instancias

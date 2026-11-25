@@ -1,4 +1,4 @@
-"""Fuerza bruta: encuentra la asignación óptima de instancias pequeñas.
+"""Backtracking: encuentra la asignación óptima de instancias pequeñas.
 
 Cada solicitud (e, a) con a ∈ R_e tiene t_a + 1 opciones: una de las t_a
 secciones de a, o ninguna. El espacio completo tiene

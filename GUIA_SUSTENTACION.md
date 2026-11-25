@@ -14,10 +14,10 @@ preguntas más probables con sus respuestas.
 > prioridad, afinidad con el profesor, compañeros, franjas libres y distancia entre salones.
 >
 > El problema es NP-difícil (se reduce desde conjunto independiente máximo), así que el
-> óptimo solo se puede calcular en instancias muy pequeñas. Para eso hicimos una fuerza
-> bruta con backtracking que usamos como referencia.
+> óptimo solo se puede calcular en instancias muy pequeñas. Para eso hicimos un
+> **backtracking** exacto que usamos como referencia.
 >
-> Nuestro algoritmo tiene dos fases: un **voraz** que inscribe las solicitudes de mayor a
+> Nuestra solución es una **heurística** de dos fases: un **voraz** que inscribe las solicitudes de mayor a
 > menor prioridad en la sección que más sube f, y una **búsqueda local** con cuatro
 > movimientos (insertar, cambiar, expulsar, intercambiar) que corrige los errores del voraz.
 >
@@ -37,7 +37,7 @@ preguntas más probables con sus respuestas.
 | Mejora de la BL sobre el voraz (instancias grandes) | ≈ 3,5 % en f, ≈ 3 puntos más de solicitudes inscritas |
 | Tiempo con 5000 estudiantes | voraz 0,24 s, voraz+BL ≈ 52 s |
 | Crecimiento empírico del tiempo | voraz ≈ n^1,10, voraz+BL ≈ n^1,56 |
-| Fuerza bruta | se multiplica ≈ ×10 por estudiante; mediana n = 6 ≈ 1,3 s (n = 8 serían minutos, n = 10 horas) |
+| Backtracking | se multiplica ≈ ×10 por estudiante; mediana n = 6 ≈ 1,3 s (n = 8 serían minutos, n = 10 horas) |
 | Solicitudes de prioridad 5 inscritas | > 97 % en todos los niveles de competencia |
 | Pasadas de la búsqueda local | entre 7 y 15; siempre terminó en óptimo local |
 
@@ -66,7 +66,7 @@ Ejecutar en este orden desde la carpeta del proyecto:
 ```
 python -m unittest discover -s tests -t .
 ```
-"Estas son las 53 pruebas: reglas de validez, restricciones, casos a mano, la fuerza bruta
+"Estas son las 53 pruebas: reglas de validez, restricciones, casos a mano, el backtracking
 contra un recorrido ingenuo y la f incremental contra la f desde cero."
 
 ```
@@ -78,7 +78,7 @@ python resolver.py datos/instancias/caso6.json
 python fuerza_bruta.py datos/instancias/inst_n6_s1.json
 python resolver.py datos/instancias/inst_n6_s1.json
 ```
-"La fuerza bruta recorre 4 millones de nodos en varios segundos; el algoritmo llega al
+"El backtracking recorre 4 millones de nodos en varios segundos; el algoritmo llega al
 mismo óptimo, f = 514, en milisegundos."
 
 ```
@@ -108,10 +108,24 @@ Tener abiertas las gráficas de `resultados/experimentos/` (sobre todo `tiempo_v
 Sí. Se reduce desde **conjunto independiente máximo**: por cada vértice se crea una
 asignatura con una sola sección, por cada arista una franja que comparten las secciones de
 sus dos extremos, y un solo estudiante que pide todo con prioridad 1 y w1 = 1 (los demás
-pesos en 0). Dos secciones se cruzan si y solo si hay arista, así que una asignación válida
-es un conjunto independiente y f = |X|. Encontrar el máximo es NP-difícil, entonces nuestro
-problema también. Además está en NP porque el verificador revisa una solución en tiempo
-polinomial.
+pesos en 0). Además, cada sección tiene un bloque propio que nadie más usa: así un vértice
+sin aristas no queda con una sección sin franjas, que el diseño no permite (F_g ≠ ∅). En
+total hay |E| + |V| bloques. Dos secciones se cruzan si y solo si hay arista, así que una
+asignación válida es un conjunto independiente y f = |X|. Encontrar el máximo es
+NP-difícil, entonces nuestro problema también. Además está en NP porque el verificador
+revisa una solución en tiempo polinomial.
+
+**¿Su algoritmo es de aproximación?**
+No. Un algoritmo de aproximación garantiza una cota (por ejemplo, "a lo sumo 2 veces peor
+que el óptimo"), y el nuestro no garantiza ninguna. Es una **heurística**: medimos qué tan
+cerca queda del óptimo (brecha promedio 0,77 %, máxima 10,4 %), pero no hay una tasa
+demostrada.
+
+**¿Por qué lo llaman backtracking y no fuerza bruta?**
+En la entrega 1 planteamos probar todas las asignaciones. Lo implementamos como
+backtracking: recorre el mismo árbol de decisiones, pero no baja por las ramas que ya violan
+una restricción. Sigue siendo exacto porque solo poda ramas inválidas; no usa cotas, así que
+no es ramificación y poda (branch and bound).
 
 **¿Con qué problemas vistos en clase se relaciona?**
 Con **coloreo de grafos**: asignar secciones sin cruces se parece a colorear un grafo de
@@ -146,7 +160,7 @@ sacando a A del martes, y A se reubica el lunes.
   propias clases que se cruzan, o a otro estudiante si está llena) y luego intenta reubicar lo
   que salió. Si f no mejora, se deshace todo.
 - **Intercambiar:** dos estudiantes de dos secciones llenas de la misma asignatura cambian de
-  lugar. Lo agregamos al comparar contra la fuerza bruta: en n = 5 y n = 6 faltaba justo eso.
+  lugar. Lo agregamos al comparar contra el backtracking: en n = 5 y n = 6 faltaba justo eso.
 
 **¿Por qué la búsqueda local termina?**
 Cada movimiento aceptado aumenta f estrictamente, y hay un número finito de asignaciones, así
@@ -175,7 +189,7 @@ pasada parcial no encuentra nada, se hace una completa para confirmar el óptimo
 ### Sobre la eficiencia
 
 **¿Qué es el estado incremental y por qué importa?**
-Recalcular f desde cero cuesta O(|X|). La fuerza bruta y la búsqueda local agregan y quitan
+Recalcular f desde cero cuesta O(|X|). El backtracking y la búsqueda local agregan y quitan
 pares millones de veces, así que el `Estado` guarda f₁…f₅ y los actualiza al inscribir o
 retirar:
 - Δf₁ = π_e(a_g), Δf₂ = φ_e(p_g)
@@ -191,7 +205,7 @@ que la f incremental es igual a la recalculada.
   el costo de evaluar un par. Como q, t y c no crecen con n, es **O(n log n)**.
 - Búsqueda local: una pasada completa es O(n log n). El número de pasadas no tiene una cota
   polinomial demostrable, por eso se limita a L pasadas: O(L · n log n).
-- Fuerza bruta: O((t+1)^Q · τ), **exponencial**.
+- Backtracking: O((t+1)^Q · τ), **exponencial**.
 
 **¿Por qué el tiempo medido de la búsqueda local crece como n^1,56 y no como n log n?**
 Porque el número de movimientos aceptados crece con n, y cada uno obliga a volver a revisar
@@ -202,9 +216,9 @@ bruta. El voraz sí coincide con la teoría (n^1,10 ≈ n log n).
 Ajustando una recta a log(tiempo) contra log(n) con mínimos cuadrados. La pendiente es el
 exponente b de tiempo ≈ a·n^b.
 
-### Sobre la fuerza bruta
+### Sobre el backtracking
 
-**¿Cómo funciona la fuerza bruta?**
+**¿Cómo funciona el backtracking?**
 Backtracking: decide una solicitud por nivel (ninguna sección o una de las de su asignatura).
 Si inscribir viola una restricción, no baja por esa rama. Al llegar a una hoja compara f con
 la mejor encontrada.
@@ -229,7 +243,7 @@ es reproducible (misma semilla, misma instancia) y permite controlar la dificult
 Tres niveles:
 1. El **verificador** revisa toda salida con un código independiente del algoritmo.
 2. Los **6 casos a mano** tienen una respuesta conocida y única.
-3. Las **instancias pequeñas** se comparan contra el óptimo de la fuerza bruta.
+3. Las **instancias pequeñas** se comparan contra el óptimo del backtracking.
 
 **¿Qué cambiaron respecto a la entrega 1?**
 - El caso 4 tenía dos óptimos; le agregamos una franja libre para que fuera único.
@@ -246,7 +260,7 @@ las franjas no disponibles del estudiante.
 **¿Qué mejorarían?**
 - Recocido simulado o búsqueda tabú para escapar de óptimos locales.
 - Comparar contra un modelo de programación entera con un solver (por ejemplo, OR-Tools) en
-  instancias medianas, donde la fuerza bruta ya no alcanza.
+  instancias medianas, donde el backtracking ya no alcanza.
 - Paralelizar las pasadas o reescribir las partes críticas en un lenguaje compilado.
 
 ---

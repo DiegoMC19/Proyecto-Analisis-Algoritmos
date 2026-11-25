@@ -1,6 +1,6 @@
 {
   "instancia": "inst_n3_s1.json",
-  "origen": "fuerza_bruta",
+  "origen": "backtracking",
   "optimo": true,
   "asignacion": [
     {
@@ -37,6 +37,6 @@
     "espacio": 6561,
     "nodos": 2808,
     "hojas": 1540,
-    "tiempo_s": 0.006
+    "tiempo_s": 0.0114
   }
 }

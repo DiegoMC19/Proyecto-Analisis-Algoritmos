@@ -1,0 +1,1039 @@
+\documentclass{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[spanish,es-tabla]{babel}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{float}
+\usepackage{array}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{url}
+
+\theoremstyle{definition}
+\newtheorem*{defn*}{Definición}
+
+\lstdefinestyle{json}{
+  basicstyle=\ttfamily\footnotesize,
+  frame=single,
+  breaklines=true,
+  columns=fullflexible,
+  keepspaces=true,
+  showstringspaces=false,
+  xleftmargin=0.5em,
+  xrightmargin=0.5em,
+  literate={á}{{\'a}}1 {é}{{\'e}}1 {í}{{\'i}}1 {ó}{{\'o}}1 {ú}{{\'u}}1 {ñ}{{\~n}}1
+}
+\lstset{style=json}
+\renewcommand{\lstlistingname}{Código}
+
+\floatname{algorithm}{Algoritmo}
+\algnewcommand\Break{\textbf{break}}
+
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+
+\title{Asignación de Horarios Estudiantiles}
+\author{}
+\date{Noviembre de 2026}
+
+\begin{document}
+
+\begin{titlepage}
+    \centering
+    \vspace*{1cm}
+    \includegraphics[height=3.5cm]{Logo_Javeriana.png}\\[1cm]
+
+    {\large \textbf{FACULTAD DE INGENIERÍA}}\\[0.2cm]
+    {\large \textbf{DEPARTAMENTO DE INGENIERÍA DE SISTEMAS}}\\[1.5cm]
+
+    {\large \textbf{Análisis de Algoritmos}}\\[0.2cm]
+    Profesor: Andrés Moreno Barbosa, PhD\\[1.5cm]
+
+    {\Huge Proyecto - Entrega 2}\\[0.4cm]
+    Asignación de horarios estudiantiles\\[2cm]
+
+    Presentado por:\\[0.3cm]
+    Juan Diego Ariza Lopez\\[0.2cm]
+    Diego Alejandro Mendoza Cruz\\[2cm]
+
+    Bogotá D.C., Colombia\\[0.2cm]
+    Noviembre de 2026
+\end{titlepage}
+
+\maketitle
+
+\begin{abstract}
+En este documento se presenta el proyecto completo de asignación de
+horarios estudiantiles. Las dos primeras partes son el análisis y diseño del
+problema y la estrategia de datos de la primera entrega, ya con la estructura
+de los datos que faltaba. La tercera parte describe la implementación: una
+heurística de dos fases (un voraz por prioridad seguido de una búsqueda
+local) y un backtracking exacto que usamos como referencia en instancias
+pequeñas. La cuarta parte presenta los experimentos: en 99 instancias
+pequeñas la heurística encuentra el óptimo en 72 y queda en promedio a
+0{,}77\,\% de él, y resuelve instancias de 5000 estudiantes en menos de un
+minuto.
+\end{abstract}
+
+% ============================================================================
+\part{Análisis y diseño del problema}
+% ============================================================================
+
+\section{Análisis}
+
+Dado un conjunto de estudiantes $E=\{e_{1},\dots,e_{n}\}$ y un conjunto
+de secciones $G=\{g_{1},\dots,g_{k}\}$ de las asignaturas
+$A=\{a_{1},\dots,a_{m}\}$, determinar en qué sección de cada asignatura
+que pidió queda inscrito cada estudiante, de forma que todos los horarios
+sean válidos y se cumplan lo mejor posible los criterios de prioridad,
+afinidad con el profesor, compañeros, tiempo libre y cercanía entre
+salones.
+
+Sean $F=D\times H$ el conjunto de franjas de la semana, donde $D$ son los
+días y $H=\{1,\dots,h\}$ los bloques de cada día, $P$ el conjunto de
+profesores y $S$ el conjunto de salones. Cada sección es una
+tupla $g=\langle a_{g},p_{g},s_{g},F_{g},c_{g}\rangle$, donde
+$a_{g}\in A$ es la asignatura, $p_{g}\in P$ el profesor, $s_{g}\in S$ el
+salón, $F_{g}\subseteq F$ las franjas en las que se dicta y
+$c_{g}\in\mathbb{Z}^{+}$ el cupo. Entre los salones existe una distancia
+$\delta:S\times S\rightarrow\mathbb{R}_{\geq0}$. Cada estudiante es una
+tupla $e=\langle R_{e},\pi_{e},N_{e},L_{e},C_{e},\varphi_{e}\rangle$,
+donde $R_{e}\subseteq A$ son las asignaturas que pide,
+$\pi_{e}(a)\in\{1,\dots,5\}$ la prioridad de cada $a\in R_{e}$,
+$N_{e}\subseteq F$ las franjas en las que no puede asistir,
+$L_{e}\subseteq F$ las franjas que quiere tener libres, $C_{e}\subseteq E$
+sus amigos o compañeros de trabajo y $\varphi_{e}:P\rightarrow\{-2,\dots,2\}$
+su afinidad con cada profesor.
+
+Sea $X\subseteq E\times G$ una asignación, donde $(e,g)\in X$ indica que
+el estudiante $e$ queda inscrito en la sección $g$, y sea
+$G_{X}(e)=\{g\in G\mid(e,g)\in X\}$ el conjunto de secciones de $e$. Para
+que $X$ sea válida debe cumplir:
+\begin{align}
+a_{g} & \in R_{e} &  & \forall_{(e,g)\in X}\label{eq:pedidas}\\
+a_{g}\neq a_{g'}\wedge F_{g}\cap F_{g'} & =\emptyset &  & \forall_{e\in E,\ g\neq g'\in G_{X}(e)}\label{eq:cruces}\\
+F_{g}\cap N_{e} & =\emptyset &  & \forall_{(e,g)\in X}\label{eq:disp}\\
+\left|\{e\in E\mid(e,g)\in X\}\right| & \leq c_{g} &  & \forall_{g\in G}\label{eq:cupo}
+\end{align}
+es decir, un estudiante solo se inscribe en asignaturas que pidió
+\eqref{eq:pedidas}, no repite asignatura ni tiene clases que se crucen
+\eqref{eq:cruces}, no tiene clase cuando no puede asistir \eqref{eq:disp}
+y ninguna sección supera su cupo \eqref{eq:cupo}.
+
+Sea $O_{X}(e)=\bigcup_{g\in G_{X}(e)}F_{g}$ el conjunto de franjas
+ocupadas de $e$. Los criterios se miden sobre $X$ así:
+\begin{align*}
+f_{1}(X) & =\sum_{(e,g)\in X}\pi_{e}(a_{g})\\
+f_{2}(X) & =\sum_{(e,g)\in X}\varphi_{e}(p_{g})\\
+f_{3}(X) & =\left|\{(e,e',g)\mid e'\in C_{e},\ (e,g)\in X,\ (e',g)\in X\}\right|\\
+f_{4}(X) & =\sum_{e\in E}\left|L_{e}\cap O_{X}(e)\right|\\
+f_{5}(X) & =\sum_{e\in E}\sum_{\substack{g,g'\in G_{X}(e)\\
+g\neq g'}}\delta(s_{g},s_{g'})\cdot\left|\{(d,b)\in F_{g}\mid(d,b+1)\in F_{g'}\}\right|
+\end{align*}
+donde $f_{1}$ es la prioridad de lo que quedó inscrito, $f_{2}$ la
+afinidad con los profesores, $f_{3}$ el número de veces que un estudiante
+queda en la misma sección que un compañero, $f_{4}$ el número de franjas
+que se querían libres y quedaron ocupadas, y $f_{5}$ la distancia que
+caminan los estudiantes entre dos clases seguidas (bloque $b$ y bloque
+$b+1$ del mismo día). Dados unos pesos $w_{1},\dots,w_{5}\geq0$, se
+quiere obtener
+\[
+\max\ f(X)=w_{1}f_{1}(X)+w_{2}f_{2}(X)+w_{3}f_{3}(X)-w_{4}f_{4}(X)-w_{5}f_{5}(X)
+\]
+sobre las asignaciones $X$ que cumplan con estas restricciones. Los
+términos $f_{4}$ y $f_{5}$ restan porque son cosas que se quieren evitar,
+y $w_{1}$ debería ser el peso más grande, porque poder cursar una
+asignatura que se necesita es más importante que los demás criterios.
+
+\section{Diseño}
+
+\begin{defn*}[Entradas:]
+\begin{enumerate}
+\item Franjas $F=D\times H$, con $D$ los días y $H=\{1,\dots,h\}$ los
+bloques de cada día.
+\item Asignaturas $A=\{a_{1},\dots,a_{m}\}$ y profesores $P$.
+\item Salones $S$ y distancia $\delta:S\times S\rightarrow\mathbb{R}_{\geq0}$,
+con $\delta(s,s)=0$ y $\delta(s,s')=\delta(s',s)$.
+\item Secciones $G=\{g_{1},\dots,g_{k}\}$, con
+$g=\langle a_{g},p_{g},s_{g},F_{g},c_{g}\rangle$, $a_{g}\in A$,
+$p_{g}\in P$, $s_{g}\in S$, $\emptyset\neq F_{g}\subseteq F$ y
+$c_{g}\in\mathbb{Z}^{+}$.
+\item Estudiantes $E=\{e_{1},\dots,e_{n}\}$, con
+$e=\langle R_{e},\pi_{e},N_{e},L_{e},C_{e},\varphi_{e}\rangle$,
+$R_{e}\subseteq A$, $\pi_{e}:R_{e}\rightarrow\{1,\dots,5\}$,
+$N_{e}\subseteq F$, $L_{e}\subseteq F\setminus N_{e}$,
+$C_{e}\subseteq E\setminus\{e\}$ y $\varphi_{e}:P\rightarrow\{-2,\dots,2\}$.
+\item Pesos $w_{1},\dots,w_{5}\in\mathbb{R}_{\geq0}$.
+\end{enumerate}
+\end{defn*}
+
+\begin{defn*}[Salidas:]
+\begin{enumerate}
+\item Una asignación $X\subseteq E\times G$ que cumple las restricciones
+\eqref{eq:pedidas}, \eqref{eq:cruces}, \eqref{eq:disp} y \eqref{eq:cupo}, y
+tal que $f(X)\geq f(X')$ para toda asignación $X'\subseteq E\times G$ que
+también las cumpla.
+\end{enumerate}
+\end{defn*}
+
+% ============================================================================
+\part{Estrategia de datos}
+% ============================================================================
+
+\section{Generación de las entradas}
+
+Los datos reales que necesita el problema, como los amigos de cada
+estudiante o qué profesores le gustan, no son públicos y además son datos
+personales. Por eso decidimos crear los datos con un generador, que es un
+programa que construye instancias aleatorias que cumplen con las entradas
+del diseño. El generador recibe unos parámetros (número de estudiantes,
+asignaturas, secciones por asignatura, salones, días, bloques y holgura de
+los cupos, entre otros) y una semilla, de modo que con los mismos parámetros
+y la misma semilla siempre se obtiene la misma instancia. Cada parte de la
+entrada se genera así:
+
+\begin{itemize}
+\item \textbf{Salones y distancias:} se ubican algunos edificios en puntos
+aleatorios de un cuadrado de 500 m de lado y cada salón pertenece a un
+edificio. La distancia entre salones es la distancia entre sus edificios, o
+20 m si están en el mismo edificio.
+\item \textbf{Asignaturas y secciones:} cada asignatura pertenece a un
+semestre y tiene entre 1 y 4 secciones. Cada sección tiene dos sesiones de
+dos bloques en días alternos (lunes y miércoles, martes y jueves, o
+miércoles y viernes), un salón y un profesor que estén libres en esas
+franjas, para que un salón o un profesor no queden en dos clases al mismo
+tiempo.
+\item \textbf{Solicitudes:} cada estudiante pide entre 3 y 6 asignaturas.
+Unas asignaturas son más populares que otras para que haya competencia por
+los cupos, y cada estudiante tiene más probabilidad de pedir las de su
+propio semestre. La prioridad de cada una es un número aleatorio de 1 a 5.
+\item \textbf{Cupos:} se cuenta cuántos estudiantes piden cada asignatura y
+se reparte ese número entre sus secciones, multiplicado por una
+\emph{holgura} (0{,}9 por defecto) y por un factor aleatorio entre 0{,}8 y
+1{,}2. Con holgura menor que 1 hay menos cupos que solicitudes.
+\item \textbf{Compañeros:} cada estudiante tiene entre 0 y 4 amigos, la
+mayoría de su mismo semestre. Si $e'$ es amigo de $e$, también se agrega
+$e$ como amigo de $e'$.
+\item \textbf{Afinidad:} cada profesor tiene una ``reputación'' aleatoria y
+las calificaciones de los estudiantes salen cerca de ese valor, así varios
+estudiantes coinciden en qué profesores les gustan. Cada estudiante conoce
+entre 2 y 8 profesores, sobre todo de las asignaturas que pide; con el resto
+la afinidad es 0.
+\item \textbf{Franjas no disponibles y libres:} cerca del 15\,\% de los
+estudiantes trabaja y tiene bloqueadas las mañanas o las tardes de toda la
+semana. Cerca de la mitad prefiere tener algo libre, escogido entre
+``viernes libre'', ``tardes libres'', ``no madrugar'' y ``hora de almuerzo
+libre''.
+\end{itemize}
+
+Respecto a lo planteado en la primera entrega cambiaron tres cosas. Los
+cupos ahora dependen de la demanda: con un rango fijo, en las instancias
+grandes casi nadie quedaba inscrito y en las pequeñas sobraban cupos. Las
+solicitudes dependen del semestre, para que los amigos compartan clases y el
+criterio $f_{3}$ tenga efecto. Y cada estudiante conoce sobre todo a los
+profesores de sus asignaturas, para que la afinidad influya en las secciones
+que puede tomar. Ninguno de estos cambios modifica las entradas ni las
+salidas del diseño.
+
+\section{Estructura de los datos}\label{sec:estructura}
+
+Todos los datos del proyecto se guardan en archivos JSON de cuatro tipos: el
+\emph{archivo de instancia}, que es la entrada del algoritmo; el
+\emph{archivo de salida}, que es lo que devuelve el algoritmo; el
+\emph{archivo de salida esperada}, contra el que se compara; y el
+\emph{reporte del verificador}. Los campos siguen la notación del diseño, de
+modo que cada uno corresponde a un elemento de las entradas o de las
+salidas. Todos los elementos (asignaturas, profesores, salones, secciones y
+estudiantes) tienen un identificador \texttt{id} único, y las relaciones
+entre ellos se escriben como referencias a esos identificadores, sin repetir
+los datos.
+
+\subsection{Archivo de instancia}
+
+La Tabla \ref{tab:mapeo} muestra cómo se representa cada elemento de las
+entradas, y el Código \ref{lst:instancia} es una instancia completa
+pequeña, con dos estudiantes, dos asignaturas y dos salones.
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{|L{2.3cm}|L{3.0cm}|L{5.4cm}|}
+\hline
+Elemento formal & Campo JSON & Representación\\
+\hline
+$F=D\times H$ & \texttt{franjas} & \texttt{dias} es la lista $D$ y
+\texttt{bloques} es $h$. Una franja $(d,b)$ se escribe como el par
+\lstinline|["LU", 1]|, con $b\in\{1,\dots,h\}$.\\
+\hline
+$A$, $P$ & \texttt{asignaturas}, \texttt{profesores} & Listas de objetos
+con \texttt{id} único.\\
+\hline
+$S$ & \texttt{salones} & Lista de objetos con \texttt{id}. La posición
+$i$ de cada salón en la lista (desde 0) es su índice $s_{i}$.\\
+\hline
+$\delta$ & \texttt{distancias} & Matriz $|S|\times|S|$ de números reales
+en metros, con \texttt{distancias[i][j]} $=\delta(s_{i},s_{j})$.\\
+\hline
+$g=\langle a_{g},p_{g},s_{g},F_{g},c_{g}\rangle$ & cada elemento de
+\texttt{secciones} & \texttt{asignatura}, \texttt{profesor} y
+\texttt{salon} son \texttt{id}; \texttt{franjas} es la lista $F_{g}$ y
+\texttt{cupo} es $c_{g}$.\\
+\hline
+$R_{e}$, $\pi_{e}$ & \texttt{solicitudes} & Lista de pares (asignatura,
+prioridad). $R_{e}$ son las asignaturas de la lista y $\pi_{e}(a)$ la
+prioridad de $a$.\\
+\hline
+$N_{e}$, $L_{e}$ & \texttt{no\_disponibles}, \texttt{libres} & Listas de
+franjas.\\
+\hline
+$C_{e}$ & \texttt{companeros} & Lista de \texttt{id} de estudiantes (lista
+de adyacencia del grafo de amistad).\\
+\hline
+$\varphi_{e}$ & \texttt{afinidad} & Diccionario de \texttt{id} de profesor
+a un valor en $\{-2,\dots,2\}$. Si un profesor no aparece,
+$\varphi_{e}(p)=0$.\\
+\hline
+$w_{1},\dots,w_{5}$ & \texttt{pesos} & Objeto con los campos \texttt{w1} a
+\texttt{w5}.\\
+\hline
+\end{tabular}
+\caption{Representación de las entradas en el archivo de instancia.}
+\label{tab:mapeo}
+\end{table}
+
+\noindent\begin{minipage}{\linewidth}
+\begin{lstlisting}[caption={Ejemplo de archivo de instancia.},label={lst:instancia}]
+{
+  "meta": {
+    "version": "1.0",
+    "semilla": 42,
+    "parametros": {
+      "estudiantes": 2, "asignaturas": 2, "secciones_por_asignatura": [1, 1],
+      "edificios": 2, "salones": 2, "dias": 5, "bloques": 7,
+      "solicitudes_por_estudiante": [1, 2], "cupo": [25, 30]
+    }
+  },
+  "franjas": { "dias": ["LU", "MA", "MI", "JU", "VI"], "bloques": 7 },
+  "pesos": { "w1": 10, "w2": 2, "w3": 1, "w4": 1, "w5": 0.01 },
+  "asignaturas": [ { "id": "A01" }, { "id": "A02" } ],
+  "profesores":  [ { "id": "P01" }, { "id": "P02" } ],
+  "edificios": [
+    { "id": "B1", "x": 120.5, "y": 340.0 },
+    { "id": "B2", "x": 410.0, "y": 75.2 }
+  ],
+  "salones": [
+    { "id": "S01", "edificio": "B1" },
+    { "id": "S02", "edificio": "B2" }
+  ],
+  "distancias": [ [0.0, 392.3], [392.3, 0.0] ],
+  "secciones": [
+    { "id": "G001", "asignatura": "A01", "profesor": "P01", "salon": "S01",
+      "franjas": [["LU", 1], ["LU", 2], ["MI", 1], ["MI", 2]], "cupo": 30 },
+    { "id": "G002", "asignatura": "A02", "profesor": "P02", "salon": "S02",
+      "franjas": [["LU", 3], ["LU", 4], ["MI", 3], ["MI", 4]], "cupo": 25 }
+  ],
+  "estudiantes": [
+    { "id": "E0001", "semestre": 3,
+      "solicitudes": [ { "asignatura": "A01", "prioridad": 5 },
+                       { "asignatura": "A02", "prioridad": 3 } ],
+      "no_disponibles": [["VI", 1], ["VI", 2]],
+      "libres": [["VI", 6], ["VI", 7]],
+      "companeros": ["E0002"],
+      "afinidad": { "P01": 2, "P02": -1 } },
+    { "id": "E0002", "semestre": 3,
+      "solicitudes": [ { "asignatura": "A01", "prioridad": 4 } ],
+      "no_disponibles": [],
+      "libres": [],
+      "companeros": ["E0001"],
+      "afinidad": {} }
+  ]
+}
+\end{lstlisting}
+\end{minipage}
+\medskip
+
+Algunas decisiones sobre esta estructura:
+
+\begin{itemize}
+\item Las franjas se escriben como pares (día, bloque) y no como un solo
+número, para que se lean directamente como elementos de $D\times H$. Así,
+dos franjas son consecutivas si tienen el mismo día y bloques $b$ y $b+1$,
+que es lo que usa $f_{5}$.
+\item La distancia $\delta$ se guarda completa como matriz, aunque el
+generador la calcula a partir de las coordenadas de los edificios. De esta
+forma el algoritmo no depende de cómo se generaron los datos, y en los
+casos hechos a mano se puede poner cualquier distancia.
+\item La afinidad $\varphi_{e}$ se guarda de forma dispersa: solo aparecen
+los profesores con afinidad distinta de 0. Así no hay que guardar
+$n\cdot|P|$ valores.
+\item $R_{e}$ y $\pi_{e}$ se guardan juntos en \texttt{solicitudes}, porque
+$\pi_{e}$ solo está definida sobre $R_{e}$.
+\item Los campos \texttt{meta}, \texttt{semestre} y \texttt{edificios} no
+son parte de las entradas del diseño. Se guardan para poder reproducir la
+instancia y para analizar los resultados, pero el algoritmo no los usa.
+\end{itemize}
+
+Antes de ejecutar el algoritmo, un validador revisa que el archivo de
+instancia cumpla las condiciones de la definición de entradas:
+
+\begin{enumerate}
+\item Los \texttt{id} son únicos dentro de cada lista, y toda referencia
+(asignatura, profesor y salón de una sección, edificio de un salón,
+asignaturas de las solicitudes, compañeros y profesores de la afinidad)
+apunta a un \texttt{id} que existe.
+\item \texttt{distancias} es una matriz $|S|\times|S|$ con valores no
+negativos, diagonal en 0 y simétrica.
+\item Toda franja tiene un día que está en \texttt{dias} y un bloque entre
+1 y \texttt{bloques}.
+\item Cada sección tiene al menos una franja, sin repetir, y un cupo entero
+mayor o igual a 1.
+\item En las solicitudes de un estudiante no se repiten asignaturas y las
+prioridades están entre 1 y 5.
+\item $L_{e}\cap N_{e}=\emptyset$ y $e\notin C_{e}$ para todo estudiante.
+\item Las afinidades están entre $-2$ y $2$ y los pesos son mayores o
+iguales a 0.
+\end{enumerate}
+
+\subsection{Archivo de salida}
+
+El algoritmo escribe su respuesta como en el Código \ref{lst:salida}. El
+campo \texttt{asignacion} es la asignación $X$ como lista de pares
+(estudiante, sección). El campo \texttt{no\_asignadas} lista las solicitudes
+que quedaron sin sección; se puede deducir de $X$, pero se guarda para
+facilitar el análisis. El campo \texttt{objetivo} tiene el valor de cada
+criterio y de $f$, y \texttt{tiempo\_ms} el tiempo de ejecución.
+
+\noindent\begin{minipage}{\linewidth}
+\begin{lstlisting}[caption={Salida del algoritmo para la instancia del Código \ref{lst:instancia}.},label={lst:salida}]
+{
+  "instancia": "ejemplo.json",
+  "algoritmo": "voraz_bl",
+  "asignacion": [
+    { "estudiante": "E0001", "seccion": "G001" },
+    { "estudiante": "E0001", "seccion": "G002" },
+    { "estudiante": "E0002", "seccion": "G001" }
+  ],
+  "no_asignadas": [],
+  "objetivo": { "f1": 12, "f2": 1, "f3": 2, "f4": 0, "f5": 784.6, "f": 116.154 },
+  "tiempo_ms": 0.1
+}
+\end{lstlisting}
+\end{minipage}
+\medskip
+
+En este ejemplo, $f_{1}=5+3+4=12$; $f_{2}=2-1+0=1$; $f_{3}=2$, porque
+\texttt{E0001} y \texttt{E0002} son compañeros y quedan en \texttt{G001}
+(se cuenta una vez por cada uno); $f_{4}=0$, porque las franjas libres del
+viernes no quedan ocupadas; y $f_{5}=2\cdot392{,}3=784{,}6$, porque
+\texttt{E0001} pasa de \texttt{S01} a \texttt{S02} el lunes y el miércoles
+del bloque 2 al 3. Con los pesos de la instancia,
+$f=10\cdot12+2\cdot1+1\cdot2-1\cdot0-0{,}01\cdot784{,}6=116{,}154$.
+
+\subsection{Archivo de salida esperada}
+
+La salida esperada de cada instancia se guarda como en el Código
+\ref{lst:esperada}. El campo \texttt{origen} dice cómo se obtuvo:
+\texttt{manual} para los casos hechos a mano, \texttt{backtracking} para las
+instancias pequeñas cuyo óptimo se calculó con el backtracking de la
+Sección \ref{sec:backtracking}, o \texttt{ninguno} si la instancia es grande
+y no se conoce el óptimo; en ese último caso \texttt{asignacion} y
+\texttt{f} quedan en \texttt{null}. Cuando el origen es el backtracking
+también se guardan sus estadísticas: el tamaño del espacio de búsqueda, los
+nodos visitados, las hojas válidas y el tiempo.
+
+\noindent\begin{minipage}{\linewidth}
+\begin{lstlisting}[caption={Salida esperada para la instancia del Código \ref{lst:instancia}.},label={lst:esperada}]
+{
+  "instancia": "ejemplo.json",
+  "origen": "backtracking",
+  "optimo": true,
+  "asignacion": [
+    { "estudiante": "E0001", "seccion": "G001" },
+    { "estudiante": "E0001", "seccion": "G002" },
+    { "estudiante": "E0002", "seccion": "G001" }
+  ],
+  "f": 116.154,
+  "estadisticas": { "espacio": 8, "nodos": 15, "hojas": 8, "tiempo_s": 0.0001 }
+}
+\end{lstlisting}
+\end{minipage}
+\medskip
+
+\subsection{Verificador y reporte}\label{sec:verificador}
+
+El verificador recibe una instancia y una salida, y no comparte código con
+el algoritmo. Hace tres cosas:
+
+\begin{enumerate}
+\item Revisa las restricciones \eqref{eq:pedidas} a \eqref{eq:cupo}.
+También revisa el formato: que cada par nombre un estudiante y una sección
+que existen, y que no haya pares repetidos.
+\item Calcula $f_{1},\dots,f_{5}$ y $f$ desde cero y los compara con el
+valor que reportó el algoritmo.
+\item Si hay salida esperada, compara contra ella. Como puede haber varias
+asignaciones óptimas con el mismo valor de $f$, una salida se considera
+correcta si es válida y su $f$ es igual a la esperada (con una tolerancia de
+$10^{-6}$). En los casos hechos a mano, que se diseñan para que tengan una
+única respuesta, se compara además la asignación exacta.
+\end{enumerate}
+
+El resultado es un reporte como el del Código \ref{lst:reporte}. Cada
+violación indica el número de la restricción que no se cumple (o
+\texttt{formato}), el estudiante o la sección y un detalle, por ejemplo:
+\begin{center}
+\lstinline|{"restriccion": 4, "seccion": "G014", "detalle": "31 inscritos, cupo 30"}|
+\end{center}
+
+\noindent\begin{minipage}{\linewidth}
+\begin{lstlisting}[caption={Reporte del verificador para la salida del Código \ref{lst:salida}.},label={lst:reporte}]
+{
+  "instancia": "ejemplo.json",
+  "valida": true,
+  "violaciones": [],
+  "f_recalculada": 116.154,
+  "objetivo_recalculado": { "f1": 12, "f2": 1, "f3": 2, "f4": 0, "f5": 784.6, "f": 116.154 },
+  "coincide_objetivo": true,
+  "comparacion_esperada": { "correcta": true, "motivo": "válida y con el valor óptimo" }
+}
+\end{lstlisting}
+\end{minipage}
+\medskip
+
+\subsection{Organización de los archivos}
+
+Las instancias se guardan en la carpeta \texttt{datos/instancias}, las
+salidas esperadas en \texttt{datos/esperadas} con el mismo nombre de la
+instancia, y las salidas de cada algoritmo en
+\texttt{resultados/}\textit{algoritmo}. El nombre de cada instancia
+generada incluye su tamaño y su semilla, por ejemplo
+\texttt{inst\_n100\_s42.json}, y los casos hechos a mano se llaman
+\texttt{caso1.json} a \texttt{caso6.json}. Las instancias de 1000 o más
+estudiantes se guardan sin sangría para que el archivo pese menos.
+
+\section{Salidas esperadas}\label{sec:esperadas}
+
+Para evaluar el algoritmo, cada instancia necesita una salida esperada
+contra la cual comparar su respuesta. La forma de obtenerla depende del
+tamaño de la instancia.
+
+\textbf{Casos hechos a mano.} Son instancias de uno o dos estudiantes en
+las que la respuesta se conoce de antemano. Cada una prueba una sola
+restricción o criterio del diseño (Tabla \ref{tab:casos}) y se usan como
+pruebas unitarias.
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{|c|L{6.5cm}|L{3.8cm}|}
+\hline
+Caso & Situación & Resultado esperado\\
+\hline
+1 & Un estudiante pide dos asignaturas cuyas únicas secciones se cruzan,
+con prioridades 4 y 2. & Solo queda inscrito en la de prioridad 4.\\
+\hline
+2 & Una sección con cupo 1 que piden dos estudiantes, con prioridades 5 y
+2. & El cupo queda para el de prioridad 5.\\
+\hline
+3 & La única sección de una asignatura es en una franja en la que el
+estudiante no puede. & No se inscribe.\\
+\hline
+4 & Dos amigos piden la misma asignatura y hay dos secciones iguales salvo
+el horario. El primero quiere libre la franja de la segunda sección; al
+otro le da igual. & Los dos quedan en la primera sección.\\
+\hline
+5 & Dos secciones iguales de la misma asignatura salvo el profesor, con
+afinidad 2 y $-2$. & Queda en la de afinidad 2.\\
+\hline
+6 & Después de una clase en el edificio B1, la siguiente asignatura tiene
+una sección en B1 y otra en B2 a la misma hora. & Queda en la del edificio
+B1.\\
+\hline
+\end{tabular}
+\caption{Casos de prueba hechos a mano.}
+\label{tab:casos}
+\end{table}
+
+En la primera entrega el caso 4 tenía dos secciones iguales, y por eso dos
+óptimos: los dos amigos en una sección o los dos en la otra. Le agregamos la
+franja libre del primer estudiante para que la respuesta sea única y se
+pueda comparar la asignación exacta.
+
+\textbf{Instancias generadas.} En instancias pequeñas la salida esperada es
+la asignación óptima. Si hay $n$ estudiantes, cada uno pide $q$ asignaturas
+y cada asignatura tiene $t$ secciones, para cada una de las $n\cdot q$
+solicitudes hay $t+1$ opciones (una de las $t$ secciones o ninguna), así que
+hay $(t+1)^{n\cdot q}$ combinaciones. Ese espacio lo recorremos con un
+backtracking (Sección \ref{sec:backtracking}), que es exacto pero solo
+alcanza para unos 6 estudiantes. En instancias grandes no se puede conocer
+el óptimo; en ese caso el verificador revisa que la salida cumpla las
+restricciones \eqref{eq:pedidas} a \eqref{eq:cupo}, y se mide el valor de
+$f$ y el tiempo de ejecución para distintos tamaños (entre 100 y 5000
+estudiantes).
+
+% ============================================================================
+\part{Algoritmo}
+% ============================================================================
+
+\section{Complejidad del problema}
+
+El problema es NP-difícil, así que no esperamos un algoritmo exacto que sea
+eficiente. Para verlo, basta con un caso particular: un solo estudiante, que
+pide todas las asignaturas con prioridad 1, sin franjas bloqueadas, sin
+compañeros y con afinidad 0, con $w_{1}=1$ y los demás pesos en 0. Ahí
+$f(X)=|X|$, y la única restricción que importa es que las secciones no se
+crucen.
+
+Ese caso ya contiene el problema del conjunto independiente máximo. Dado un
+grafo $\mathcal{G}=(V,\mathcal{E})$, creamos un día con un bloque por cada
+arista y un bloque por cada vértice ($h=|\mathcal{E}|+|V|$). Cada vértice
+$v$ es una asignatura con una sola sección $g_{v}$ de cupo 1, cuyas franjas
+son el bloque propio de $v$ más los bloques de las aristas que tocan a $v$.
+El bloque propio hace que toda sección tenga al menos una franja, como exige
+el diseño, aun si el vértice no tiene aristas. Así, $g_{u}$ y $g_{v}$ se
+cruzan exactamente cuando $(u,v)$ es una arista, y una asignación válida es
+lo mismo que un conjunto independiente, con $f(X)$ igual a su tamaño.
+Encontrar la mejor asignación resolvería el conjunto independiente máximo,
+que es NP-difícil, y la construcción toma tiempo polinomial. Además, la
+versión de decisión (¿existe $X$ válida con $f(X)\geq K$?) está en NP,
+porque el verificador revisa una asignación en tiempo polinomial.
+
+Con muchos estudiantes el problema es todavía más difícil, porque además de
+los cruces hay competencia por los cupos y dependencias entre estudiantes
+(compañeros). Por eso usamos el backtracking exacto solo en instancias
+pequeñas, como referencia, y para el resto proponemos una heurística.
+
+\section{Implementación}
+
+El proyecto está escrito en Python 3, sin librerías externas (salvo
+\texttt{matplotlib} para las gráficas), y está organizado en un paquete
+\texttt{horarios} con un módulo por responsabilidad (Tabla
+\ref{tab:modulos}). El código está en
+\url{https://github.com/DiegoMC19/Proyecto-Analisis-Algoritmos}.
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{|L{2.6cm}|L{9.0cm}|}
+\hline
+Módulo & Responsabilidad\\
+\hline
+\texttt{modelo} & Clases \texttt{Seccion}, \texttt{Estudiante} e
+\texttt{Instancia}; cada campo corresponde a un elemento de las entradas.\\
+\hline
+\texttt{validador} & Las 7 reglas de validez de una instancia.\\
+\hline
+\texttt{verificador} & Restricciones \eqref{eq:pedidas}--\eqref{eq:cupo},
+$f$ desde cero y comparación con la salida esperada.\\
+\hline
+\texttt{generador} & Generador de instancias con semilla.\\
+\hline
+\texttt{estado} & Asignación parcial con $f$ actualizada de forma
+incremental.\\
+\hline
+\texttt{fuerza\_bruta} & El backtracking exacto.\\
+\hline
+\texttt{casos} & Los 6 casos hechos a mano.\\
+\hline
+\texttt{algoritmo} & La heurística: voraz y búsqueda local.\\
+\hline
+\end{tabular}
+\caption{Módulos de la implementación.}
+\label{tab:modulos}
+\end{table}
+
+El código tiene 53 pruebas unitarias: una por cada regla de validez y cada
+restricción, los 6 casos hechos a mano, la comparación del backtracking
+contra un recorrido de todas las $(t+1)^{n\cdot q}$ combinaciones, y la
+comparación de la $f$ incremental contra la $f$ calculada desde cero.
+
+\subsection{Estado incremental}
+
+El backtracking y la búsqueda local agregan y quitan pares $(e,g)$ muchas
+veces, y recalcular $f$ desde cero cuesta $O(|X|)$. Por eso la clase
+\texttt{Estado} guarda $G_{X}(e)$, los inscritos $I(g)$ de cada sección, las
+franjas ocupadas $O_{X}(e)$ y los valores $f_{1},\dots,f_{5}$, y los
+actualiza en cada cambio. Si se inscribe a $e$ en $g$ y la asignación sigue
+siendo válida, cada criterio cambia en
+\begin{align*}
+\Delta f_{1} & =\pi_{e}(a_{g}), \qquad \Delta f_{2}=\varphi_{e}(p_{g}),\\
+\Delta f_{3} & =\left|C_{e}\cap I(g)\right|+\left|\{e'\in I(g)\mid e\in C_{e'}\}\right|,\\
+\Delta f_{4} & =\left|L_{e}\cap F_{g}\right|,\\
+\Delta f_{5} & =\sum_{g'\in G_{X}(e)}\delta(s_{g},s_{g'})\cdot\bigl(\sigma(g,g')+\sigma(g',g)\bigr),
+\end{align*}
+donde $\sigma(g,g')=|\{(d,b)\in F_{g}\mid(d,b+1)\in F_{g'}\}|$ es el número
+de veces que $g'$ va justo después de $g$. La fórmula de $\Delta f_{4}$ es
+exacta porque, por \eqref{eq:cruces}, $F_{g}$ no se cruza con las otras
+clases de $e$. Así, cada cambio cuesta $O(k_{e}+|C_{e}|)$, con $k_{e}$ el
+número de clases de $e$. Llamamos \emph{ganancia} de $(e,g)$ al cambio de
+$f$, $\Delta f=w_{1}\Delta f_{1}+w_{2}\Delta f_{2}+w_{3}\Delta f_{3}-w_{4}\Delta f_{4}-w_{5}\Delta f_{5}$.
+
+\section{Heurística: voraz más búsqueda local}
+
+Nuestra solución es una heurística de dos fases. No es un algoritmo de
+aproximación, porque no garantiza qué tan lejos queda del óptimo; lo que
+hicimos fue medirlo en la Parte IV.
+
+\subsection{Fase 1: voraz por prioridad}
+
+Como $w_{1}$ es el peso más grande, lo más importante es inscribir las
+solicitudes de mayor prioridad. El voraz (Algoritmo \ref{alg:voraz})
+recorre todas las solicitudes de mayor a menor prioridad y le da a cada una
+la sección válida con mayor ganancia. La ganancia ya tiene en cuenta la
+afinidad, los compañeros inscritos antes, las franjas libres y la distancia
+a las otras clases del estudiante. Entre solicitudes de igual prioridad van
+primero las asignaturas con menos secciones, que tienen menos opciones.
+
+\begin{algorithm}[H]
+\caption{Voraz por prioridad}\label{alg:voraz}
+\begin{algorithmic}[1]
+\Require una instancia
+\Ensure una asignación válida $X$
+\State $X\gets\emptyset$
+\State $L\gets$ solicitudes $(e,a)$ con $a\in R_{e}$, ordenadas por $\pi_{e}(a)$ descendente y luego por $|G_{a}|$ ascendente
+\ForAll{$(e,a)\in L$}
+  \State $g^{*}\gets\arg\max\{\Delta f(e,g)\mid g\in G_{a},\ X\cup\{(e,g)\}\text{ es válida}\}$
+  \If{$g^{*}$ existe y $\Delta f(e,g^{*})>0$}
+    \State $X\gets X\cup\{(e,g^{*})\}$
+  \EndIf
+\EndFor
+\State \Return $X$
+\end{algorithmic}
+\end{algorithm}
+
+El voraz nunca se devuelve, y eso lo puede llevar a malas decisiones. Por
+ejemplo, si un estudiante pide $A$ con prioridad 5 y $B$ con prioridad 4,
+$A$ tiene una sección el lunes y otra el martes, $B$ solo una el martes, y
+el estudiante tiene afinidad 2 con el profesor de $A$ del martes, el voraz
+lo pone en $A$ el martes (ganancia $50+4$) y después ya no puede tomar $B$.
+Así obtiene $f=54$, cuando lo mejor es $A$ el lunes y $B$ el martes, con
+$f=90$.
+
+\subsection{Fase 2: búsqueda local}
+
+La búsqueda local parte de la asignación del voraz y prueba cuatro
+movimientos. Cada uno solo se acepta si $f$ aumenta; si no, se deshace.
+
+\begin{enumerate}
+\item[A.] \textbf{Insertar:} una solicitud pendiente toma una sección que
+quedó con cupo.
+\item[B.] \textbf{Cambiar:} un estudiante pasa a otra sección de la misma
+asignatura, o la suelta si eso aumenta $f$.
+\item[C.] \textbf{Expulsar:} una solicitud pendiente $(e,a)$ entra a una
+sección $g$ de $a$ sacando lo que estorba: las clases de $e$ que se cruzan
+con $g$ y, si $g$ está llena, a otro estudiante $e_{2}$ de $g$. Después se
+intenta reubicar lo que salió (Algoritmo \ref{alg:expulsar}). Este
+movimiento arregla el ejemplo anterior. Para no multiplicar el tiempo por el
+cupo, en una sección llena solo se prueban los 3 estudiantes más
+prometedores: primero los que tienen otra sección libre a donde ir y luego
+los de menor prioridad.
+\item[D.] \textbf{Intercambiar:} dos estudiantes de dos secciones llenas de
+la misma asignatura cambian de sección entre sí. Ninguno de los dos podría
+moverse solo, porque no hay cupo.
+\end{enumerate}
+
+\begin{algorithm}[H]
+\caption{Movimiento de expulsión}\label{alg:expulsar}
+\begin{algorithmic}[1]
+\ForAll{solicitud pendiente $(e,a)$, de mayor a menor prioridad}
+  \ForAll{$g\in G_{a}$ con $F_{g}\cap N_{e}=\emptyset$}
+    \State $K\gets\{g'\in G_{X}(e)\mid F_{g'}\cap F_{g}\neq\emptyset\}$
+    \State $V\gets$ los 3 mejores candidatos $e_{2}\in I(g)$ si $g$ está llena; si no, $\{\text{ninguno}\}$
+    \ForAll{$e_{2}\in V$}
+      \State $f_{0}\gets f(X)$
+      \State quitar de $X$ los pares $(e,g')$ con $g'\in K$ y el par $(e_{2},g)$
+      \State agregar $(e,g)$ a $X$
+      \State reubicar a $e_{2}$ en la mejor sección válida de $a$, si la hay
+      \State reubicar cada asignatura de $K$ en la mejor sección válida, si la hay
+      \If{$f(X)>f_{0}$}
+        \State aceptar y pasar a la siguiente solicitud
+      \Else
+        \State deshacer los cambios
+      \EndIf
+    \EndFor
+  \EndFor
+\EndFor
+\end{algorithmic}
+\end{algorithm}
+
+En el intercambio, el cambio de $f$ se calcula con una fórmula directa, sin
+modificar $X$. Si $e_{1}\in I(g_{1})$ y $e_{2}\in I(g_{2})$ intercambian,
+$f_{1}$ no cambia (es la misma asignatura); $f_{2}$, $f_{4}$ y $f_{5}$
+cambian según la afinidad, las franjas libres y las distancias de cada uno en
+su sección nueva; y para $f_{3}$ se cuentan los amigos que cada uno tiene en
+la sección nueva menos los que tenía en la vieja.
+
+Los movimientos se aplican por pasadas (Algoritmo \ref{alg:bl}). Después de
+la primera, solo se revisan las asignaturas y los estudiantes que cambiaron
+en la pasada anterior, porque un movimiento sobre algo que no cambió da el
+mismo resultado que antes. Cuando una de esas pasadas no encuentra mejoras,
+se hace una pasada completa para confirmar que se llegó a un óptimo local,
+es decir, a una asignación que ninguno de los cuatro movimientos mejora.
+
+\begin{algorithm}[H]
+\caption{Búsqueda local}\label{alg:bl}
+\begin{algorithmic}[1]
+\Require una asignación válida $X$ (la del voraz)
+\Ensure una asignación válida $X'$ con $f(X')\geq f(X)$
+\State $\mathit{completa}\gets$ true
+\While{no se alcance el límite de pasadas o de tiempo}
+  \State $\mathit{mejoras}\gets$ \Call{Insertar}{$X$} $+$ \Call{Cambiar}{$X$} $+$ \Call{Expulsar}{$X$} $+$ \Call{Intercambiar}{$X$}
+  \If{$\mathit{mejoras}>0$}
+    \State $\mathit{completa}\gets$ false \Comment{la siguiente pasada solo revisa lo que cambió}
+  \ElsIf{$\mathit{completa}$}
+    \State \Break \Comment{óptimo local}
+  \Else
+    \State $\mathit{completa}\gets$ true \Comment{confirmar con una pasada completa}
+  \EndIf
+\EndWhile
+\State \Return $X$
+\end{algorithmic}
+\end{algorithm}
+
+La búsqueda siempre termina: cada movimiento aceptado aumenta $f$ y hay un
+número finito de asignaciones, así que nunca se repite una. Además se limita
+el número de pasadas (100) y el tiempo. En todos los experimentos terminó
+por llegar a un óptimo local, con entre 7 y 15 pasadas.
+
+\section{Backtracking exacto}\label{sec:backtracking}
+
+Para conocer el óptimo de instancias pequeñas recorremos el espacio descrito en la
+Sección \ref{sec:esperadas} con backtracking (Algoritmo \ref{alg:bt}): en cada nivel se decide
+una solicitud (ninguna sección o una de las de su asignatura) y no se baja
+por las ramas que ya violan una restricción. Esa poda no cambia el
+resultado, porque ninguna asignación válida tiene una parte inválida; solo
+evita recorrer las ramas inválidas. No usamos cotas, así que no es
+ramificación y poda.
+
+\begin{algorithm}[H]
+\caption{Backtracking}\label{alg:bt}
+\begin{algorithmic}[1]
+\Function{Explorar}{$i$}
+  \If{$i=|L|$}
+    \If{$f(X)>f(X^{*})$}
+      \State $X^{*}\gets X$
+    \EndIf
+    \State \Return
+  \EndIf
+  \State $(e,a)\gets L[i]$
+  \State \Call{Explorar}{$i+1$} \Comment{no inscribir la solicitud}
+  \ForAll{$g\in G_{a}$ tal que $X\cup\{(e,g)\}$ es válida}
+    \State agregar $(e,g)$ a $X$
+    \State \Call{Explorar}{$i+1$}
+    \State quitar $(e,g)$ de $X$
+  \EndFor
+\EndFunction
+\end{algorithmic}
+\end{algorithm}
+
+\section{Análisis de complejidad}
+
+Sean $n$ el número de estudiantes, $Q=\sum_{e}|R_{e}|$ el número de
+solicitudes, $P\leq Q$ las solicitudes pendientes, $t$ el máximo de
+secciones por asignatura, $q$ el máximo de asignaturas por estudiante,
+$c$ el máximo de compañeros, $\kappa$ el cupo de una sección y
+$\tau=O(q+c)$ el costo de evaluar la ganancia de un par $(e,g)$ con el
+estado incremental. La Tabla \ref{tab:complejidad} resume el costo de cada
+parte.
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{|L{4.4cm}|L{7.2cm}|}
+\hline
+Parte & Costo\\
+\hline
+Verificador & $O\bigl(|X|+\sum_{e}k_{e}^{2}\,|F_{g}|\bigr)$\\
+\hline
+Voraz & $O(Q\log Q+Q\cdot t\cdot\tau)$\\
+\hline
+Búsqueda local, una pasada completa &
+A: $O(P\log P+P\,t\,\tau)$; B: $O(Q\,t\,\tau)$;
+C: $O(P\,t\,(\kappa\log\kappa+3\tau))$; D: $O(\sum_{a}t_{a}^{2}\kappa^{2}\tau)$\\
+\hline
+Backtracking & $O\bigl(\prod_{(e,a)}(t_{a}+1)\cdot\tau\bigr)=O\bigl((t+1)^{Q}\,\tau\bigr)$\\
+\hline
+\end{tabular}
+\caption{Complejidad de cada parte.}
+\label{tab:complejidad}
+\end{table}
+
+En el problema real $q\leq 6$, $t\leq 4$, y $c$ y $\kappa$ no dependen de
+$n$, así que $Q=O(n)$, el voraz es $O(n\log n)$ y una pasada completa de la
+búsqueda local es $O(n\log n)$ (por el ordenamiento de las solicitudes
+pendientes). No tenemos una cota polinomial para el número de pasadas,
+porque solo sabemos que $f$ crece en cada una; por eso se limita a $L$
+pasadas, y la búsqueda local queda en $O(L\cdot n\log n)$. El backtracking,
+en cambio, es exponencial en el número de solicitudes.
+
+% ============================================================================
+\part{Resultados}
+% ============================================================================
+
+\section{Metodología}
+
+Todos los experimentos se corrieron en un computador personal con Python
+3.14, en un solo hilo. Todas las salidas pasaron por el verificador antes de
+registrarse, y ninguna violó las restricciones. Además, la heurística
+resuelve bien los 6 casos hechos a mano. Hicimos tres experimentos:
+
+\begin{enumerate}
+\item \textbf{Calidad:} 99 instancias pequeñas ($n=3$ a $6$, con 5
+asignaturas, 2 o 3 solicitudes por estudiante y de 1 a 3 secciones por
+asignatura) cuyo óptimo se calculó con el backtracking.
+\item \textbf{Escalabilidad:} instancias de 100 a 5000 estudiantes, tres
+semillas por tamaño, con los parámetros por defecto del generador.
+\item \textbf{Competencia:} una instancia de 1000 estudiantes con holguras
+entre 0{,}5 y 1{,}5.
+\end{enumerate}
+
+\section{Calidad contra el óptimo}
+
+La brecha de una solución $X$ es $100\cdot(f(X^{*})-f(X))/f(X^{*})$, con
+$X^{*}$ la asignación óptima. La búsqueda local duplica el número de
+instancias en las que se llega al óptimo y baja la brecha promedio de
+2{,}13\,\% a 0{,}77\,\% (Tabla \ref{tab:calidad} y Figura
+\ref{fig:brecha}). En 83 de las 99 instancias la brecha final es de 1\,\% o
+menos; la mayor fue de 10{,}4\,\%.
+
+\begin{table}[H]
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{|c|c|c|c|c|c|}
+\hline
+$n$ & Instancias & \multicolumn{2}{c|}{Óptimas} & \multicolumn{2}{c|}{Brecha promedio}\\
+ & & voraz & voraz+BL & voraz & voraz+BL\\
+\hline
+3 & 30 & 14 & 23 & 1{,}75\,\% & 0{,}73\,\%\\
+4 & 30 & 10 & 21 & 1{,}79\,\% & 0{,}68\,\%\\
+5 & 30 & 10 & 22 & 2{,}77\,\% & 0{,}91\,\%\\
+6 & 9 & 2 & 6 & 2{,}37\,\% & 0{,}77\,\%\\
+\hline
+Total & 99 & 36 & 72 & 2{,}13\,\% & 0{,}77\,\%\\
+\hline
+\end{tabular}
+\caption{Calidad contra el óptimo (BL: búsqueda local).}
+\label{tab:calidad}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{brecha_optimo.pdf}
+\caption{Brecha promedio contra el óptimo.}
+\label{fig:brecha}
+\end{figure}
+
+La Figura \ref{fig:bt} compara los tiempos en esas mismas instancias. El
+tiempo del backtracking se multiplica por cerca de 10 con cada estudiante
+adicional, mientras que el de la heurística se mantiene por debajo de un
+milisegundo.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{fuerza_bruta_vs_algoritmo.pdf}
+\caption{Tiempo del backtracking y de la heurística en instancias pequeñas.}
+\label{fig:bt}
+\end{figure}
+
+\section{Escalabilidad}
+
+La Tabla \ref{tab:escalabilidad} muestra el promedio de las tres semillas
+para cada tamaño. La búsqueda local mejora $f$ entre 3{,}2\,\% y 3{,}9\,\%
+sobre el voraz e inscribe cerca de 3 puntos porcentuales más de las
+solicitudes. Ajustando una recta en escala log-log (Figura
+\ref{fig:tiempo}), el tiempo del voraz crece como $n^{1{,}10}$, que coincide
+con $O(n\log n)$. El de la heurística completa crece como $n^{1{,}56}$, más
+rápido que una pasada: con más estudiantes se encuentran más movimientos, y
+cada uno hace que en la pasada siguiente se vuelvan a revisar las
+asignaturas y estudiantes que tocó. Aun así el crecimiento es polinomial y
+está muy lejos del exponencial del backtracking.
+
+\begin{table}[H]
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{|c|c|c|c|c|c|c|}
+\hline
+$n$ & Secciones & Solicitudes & \multicolumn{2}{c|}{Tiempo} & Inscritas & Mejora\\
+ & & & voraz & voraz+BL & voraz $\to$ voraz+BL & de $f$\\
+\hline
+100 & 39 & 463 & 0{,}003 s & 0{,}13 s & 81{,}1 $\to$ 83{,}7\,\% & 3{,}23\,\%\\
+250 & 72 & 1122 & 0{,}009 s & 0{,}44 s & 84{,}0 $\to$ 86{,}7\,\% & 3{,}26\,\%\\
+500 & 115 & 2257 & 0{,}018 s & 1{,}20 s & 83{,}2 $\to$ 86{,}5\,\% & 3{,}90\,\%\\
+1000 & 187 & 4503 & 0{,}040 s & 3{,}64 s & 83{,}5 $\to$ 86{,}2\,\% & 3{,}62\,\%\\
+2500 & 428 & 11205 & 0{,}100 s & 18{,}18 s & 83{,}5 $\to$ 86{,}2\,\% & 3{,}29\,\%\\
+5000 & 871 & 22499 & 0{,}239 s & 51{,}60 s & 83{,}2 $\to$ 86{,}2\,\% & 3{,}48\,\%\\
+\hline
+\end{tabular}
+\caption{Escalabilidad (promedio de 3 semillas).}
+\label{tab:escalabilidad}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{tiempo_vs_n.pdf}
+\caption{Tiempo de ejecución según el número de estudiantes (escala log-log).}
+\label{fig:tiempo}
+\end{figure}
+
+\section{Competencia por los cupos}
+
+La holgura es la razón entre los cupos ofrecidos y las solicitudes de cada
+asignatura. Con poca holgura casi todas las secciones quedan llenas desde
+el voraz, así que la búsqueda local ya no puede inscribir a más estudiantes
+y solo los reorganiza; su efecto se nota cuando hay algo de espacio (Tabla
+\ref{tab:competencia} y Figura \ref{fig:competencia}). En todos los casos se
+inscribe más del 97\,\% de las solicitudes de prioridad 5, que es lo que
+busca el peso $w_{1}$.
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{|c|c|c|c|}
+\hline
+Holgura & Inscritas voraz & Inscritas voraz+BL & Prioridad 5 inscritas\\
+\hline
+0{,}5 & 49{,}77\,\% & 49{,}77\,\% & 97{,}44\,\%\\
+0{,}7 & 69{,}53\,\% & 69{,}62\,\% & 97{,}44\,\%\\
+0{,}9 & 83{,}61\,\% & 86{,}06\,\% & 97{,}44\,\%\\
+1{,}1 & 89{,}61\,\% & 93{,}34\,\% & 97{,}44\,\%\\
+1{,}3 & 91{,}09\,\% & 94{,}24\,\% & 97{,}44\,\%\\
+1{,}5 & 91{,}33\,\% & 94{,}42\,\% & 97{,}44\,\%\\
+\hline
+\end{tabular}
+\caption{Efecto de la holgura ($n=1000$).}
+\label{tab:competencia}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{competencia.pdf}
+\caption{Solicitudes inscritas según la holgura.}
+\label{fig:competencia}
+\end{figure}
+
+Incluso con holgura 1{,}5 no se inscribe el 100\,\%, porque hay solicitudes
+imposibles: asignaturas cuyas secciones se cruzan entre sí o con las franjas
+no disponibles del estudiante.
+
+\section{Conclusiones}
+
+\begin{itemize}
+\item El problema es NP-difícil, así que no se puede esperar un algoritmo
+exacto y eficiente. El backtracking solo alcanza hasta unos 6 estudiantes.
+\item El voraz por prioridad es muy rápido ($O(n\log n)$) y ya inscribe
+casi todas las solicitudes de prioridad alta, pero como no se devuelve queda
+en promedio a 2\,\% del óptimo.
+\item La búsqueda local corrige buena parte de esos errores: llega al
+óptimo en 72 de 99 instancias pequeñas, queda en promedio a 0{,}77\,\% de
+él, y mejora $f$ en cerca de 3{,}5\,\% en las instancias grandes, con
+5000 estudiantes en menos de un minuto.
+\item La búsqueda local se queda en óptimos locales. Para escapar de ellos
+se podría probar recocido simulado o búsqueda tabú, o comparar contra un
+modelo de programación entera resuelto con un \emph{solver}.
+\end{itemize}
+
+\end{document}
