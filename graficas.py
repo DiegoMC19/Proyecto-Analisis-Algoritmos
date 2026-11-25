@@ -3,7 +3,7 @@
 Uso:
     python graficas.py
 
-Cada gráfica se guarda en PNG (para ver) y PDF (vectorial, para el LaTeX).
+Cada gráfica se guarda en PNG y en PDF.
 También escribe resultados/experimentos/resumen.md con las tablas.
 """
 
