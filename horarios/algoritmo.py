@@ -1,41 +1,8 @@
-"""Algoritmo de asignación: voraz con varios criterios + backtracking con poda.
+"""Algoritmo de asignación: voraz con tres criterios + backtracking con poda.
 
-Las dos técnicas son las vistas en clase para problemas NP-completos.
-
-Fase 1 - Voraz con varios criterios
-    Se ordenan las solicitudes (e, a) con un criterio y cada una toma la
-    sección válida con mayor ganancia en f, si esa ganancia es positiva. Nunca
-    se devuelve sobre una decisión. Como no hay un criterio que sea siempre el
-    mejor (igual que en la selección de actividades), se corre con tres
-    criterios y se queda la mejor asignación:
-
-      prioridad:  mayor prioridad primero; en empate, la asignatura con menos
-                  secciones.
-      escasez:    primero las asignaturas con menos cupo frente a su demanda
-                  (las más disputadas); en empate, mayor prioridad.
-      opciones:   primero las asignaturas con menos secciones (menos
-                  alternativas); en empate, mayor prioridad.
-
-    Costo de un criterio: O(Q log Q + Q * t * tau), con Q solicitudes, t
-    secciones por asignatura y tau = O(k + c) el costo de una ganancia.
-
-Fase 2 - Backtracking con poda (ramificación y acotamiento)
-    Se recorre el árbol de decisiones como en el coloreado de grafos: un nivel
-    por solicitud y, como opciones, las secciones de la asignatura o ninguna.
-      - Se empieza con la mejor asignación del voraz como la mejor conocida,
-        así el resultado nunca es peor que el voraz.
-      - Las opciones se prueban de mayor a menor ganancia (las más prometedoras
-        primero) y la opción "ninguna" al final.
-      - Poda por restricciones: solo se baja por secciones válidas.
-      - Poda por cota: si f(X) + U(i) <= f de la mejor, ninguna hoja de la
-        rama puede superarla. U(i) suma, para las solicitudes que faltan, lo
-        máximo que cada una podría sumar a f (ignorando lo que resta).
-      - Tiempo límite: si se acaba, se devuelve la mejor encontrada. Si el
-        árbol se recorre completo, la mejor es el óptimo.
-
-    Costo en el peor caso: O((t + 1)^Q * t * tau), exponencial, igual que la
-    búsqueda exhaustiva; la poda y el buen punto de partida solo reducen lo
-    que se explora en la práctica.
+1. El voraz se corre con tres órdenes (prioridad, escasez, opciones) y se queda con el mejor.
+2. El backtracking parte de esa solución, poda por restricciones y por una cota, y tiene
+   tiempo límite. Si alcanza a recorrer todo el árbol, la respuesta es la óptima.
 """
 
 from __future__ import annotations
@@ -63,9 +30,7 @@ def mejor_seccion(estado: Estado, e: str, a: str) -> tuple[str | None, float]:
     return mejor, mejor_ganancia
 
 
-# ----------------------------------------------------------------------------
 # Fase 1: voraz con varios criterios
-# ----------------------------------------------------------------------------
 
 def _escasez(inst: Instancia) -> dict[str, float]:
     """Cupo total de cada asignatura dividido entre las solicitudes que tiene."""
@@ -107,8 +72,7 @@ def voraz(inst: Instancia, criterio: str = "prioridad") -> Estado:
 
 
 def voraz_criterios(inst: Instancia, criterios=CRITERIOS) -> tuple[Estado, str, dict[str, float]]:
-    """Corre el voraz con cada criterio y devuelve el mejor estado, su criterio
-    y el f que obtuvo cada uno."""
+    """Corre el voraz con cada criterio y devuelve el mejor resultado."""
     mejor, mejor_criterio, valores = None, None, {}
     for c in criterios:
         estado = voraz(inst, c)
@@ -118,9 +82,7 @@ def voraz_criterios(inst: Instancia, criterios=CRITERIOS) -> tuple[Estado, str, 
     return mejor, mejor_criterio, valores
 
 
-# ----------------------------------------------------------------------------
 # Fase 2: backtracking con poda
-# ----------------------------------------------------------------------------
 
 @dataclass
 class ResultadoBacktracking:
@@ -179,9 +141,7 @@ def backtracking(inst: Instancia, inicial: Asignacion | None = None,
     return ResultadoBacktracking(mejor, mejor_f, not corte, nodos)
 
 
-# ----------------------------------------------------------------------------
 # Algoritmo completo
-# ----------------------------------------------------------------------------
 
 @dataclass
 class Resultado:

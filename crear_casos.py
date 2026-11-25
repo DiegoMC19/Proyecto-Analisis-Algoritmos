@@ -1,8 +1,4 @@
-"""Escribe los 6 casos hechos a mano en datos/instancias y datos/esperadas.
-
-Uso:
-    python crear_casos.py
-"""
+"""Escribe los 6 casos hechos a mano en datos/instancias y datos/esperadas."""
 
 import sys
 from pathlib import Path

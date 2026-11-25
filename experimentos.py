@@ -1,21 +1,6 @@
-"""Experimentos para la sustentación.
+"""Corre los experimentos (calidad, escalabilidad y competencia) y guarda los CSV.
 
-    1. Calidad:        instancias pequeñas (n = 3..6) con óptimo por el
-                       backtracking exacto (fuerza_bruta). Brecha del voraz con
-                       un criterio, del voraz con varios criterios y del voraz
-                       + backtracking con poda.
-    2. Escalabilidad:  n = 100 ... 5000 con varias semillas. Tiempo, f y
-                       solicitudes inscritas.
-    3. Competencia:    n = 1000 variando la holgura (cupos / demanda).
-
-Todas las salidas se verifican con el verificador antes de guardarlas.
-Los resultados quedan en resultados/experimentos/*.csv y las gráficas se
-generan con graficas.py.
-
-Uso:
-    python experimentos.py            # todo (~10 minutos)
-    python experimentos.py --rapido   # versión corta para probar
-    python experimentos.py --solo escalabilidad
+Uso: python experimentos.py [--rapido] [--solo calidad|escalabilidad|competencia]
 """
 
 import argparse
@@ -64,7 +49,6 @@ def mejora(base: float, f: float) -> float:
     return 100 * (f - base) / abs(base) if base else 0.0
 
 
-# ----------------------------------------------------------------------------
 
 def experimento_calidad(rapido: bool) -> None:
     print("1. Calidad contra el óptimo")

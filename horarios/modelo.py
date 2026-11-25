@@ -1,14 +1,4 @@
-"""Modelo de datos del problema.
-
-Cada clase corresponde a un elemento de las entradas del diseño:
-
-    Franja      (d, b) in F = D x H
-    Seccion     g = <a_g, p_g, s_g, F_g, c_g>
-    Estudiante  e = <R_e, pi_e, N_e, L_e, C_e, phi_e>
-    Instancia   todas las entradas juntas (F, A, P, S, delta, G, E, w)
-
-Una asignación X es una lista de pares (id_estudiante, id_seccion).
-"""
+"""Clases que representan las entradas del problema: secciones, estudiantes e instancia."""
 
 from __future__ import annotations
 
@@ -83,10 +73,7 @@ def _franjas(lista) -> frozenset[Franja]:
 
 
 def instancia_desde_dict(datos: dict) -> Instancia:
-    """Construye la instancia a partir del JSON ya leído.
-
-    Supone que los datos ya pasaron por el validador.
-    """
+    """Construye la instancia a partir del JSON ya validado."""
     secciones = {
         g["id"]: Seccion(
             id=g["id"],

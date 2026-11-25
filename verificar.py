@@ -1,12 +1,6 @@
 """Verifica la salida de un algoritmo contra su instancia.
 
-Uso:
-    python verificar.py INSTANCIA SALIDA [--esperada ESPERADA] [--reporte REPORTE]
-
-Ejemplo:
-    python verificar.py datos/instancias/ejemplo.json resultados/manual/ejemplo.json --esperada datos/esperadas/ejemplo.json
-
-Termina con código 0 si la salida es válida (y correcta, si se da --esperada) y 1 si no.
+Uso: python verificar.py INSTANCIA SALIDA [--esperada ARCHIVO] [--reporte ARCHIVO]
 """
 
 import argparse

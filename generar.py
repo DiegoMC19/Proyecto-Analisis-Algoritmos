@@ -1,11 +1,6 @@
-"""Genera instancias aleatorias y las guarda en datos/instancias.
+"""Genera instancias aleatorias en datos/instancias.
 
-Uso:
-    python generar.py -n 100 1000 5000 --semilla 42
-    python generar.py -n 200 --holgura 0.6 --asignaturas 15
-
-Cada instancia se valida antes de guardarse. El nombre del archivo incluye el
-número de estudiantes y la semilla: inst_n<estudiantes>_s<semilla>.json
+Uso: python generar.py -n 100 1000 5000 --semilla 42
 """
 
 import argparse
@@ -63,7 +58,7 @@ def main() -> int:
             return 1
 
         ruta = Path(args.carpeta) / nombre_instancia(p)
-        # Las instancias grandes se guardan sin sangría para que el archivo pese menos.
+        # Las instancias grandes se guardan sin sangría (pesan menos).
         guardar_json(ruta, datos, indentar=n < 1000)
         solicitudes = sum(len(e["solicitudes"]) for e in datos["estudiantes"])
         cupos = sum(g["cupo"] for g in datos["secciones"])

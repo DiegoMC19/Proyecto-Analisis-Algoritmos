@@ -1,32 +1,4 @@
-"""Generador de instancias aleatorias (Sección 3 del documento).
-
-Con los mismos parámetros y la misma semilla siempre se obtiene la misma
-instancia, porque todo el azar sale de un único random.Random(semilla) y los
-elementos se recorren siempre en el mismo orden.
-
-Pasos:
-    1. Asignaturas: cada una con un semestre y entre 1 y 4 secciones.
-    2. Edificios en puntos aleatorios de un cuadrado; cada salón en un edificio.
-       delta = distancia entre edificios, o una distancia interna pequeña si
-       los salones están en el mismo edificio.
-    3. Horario de cada sección: dos sesiones de dos bloques en días alternos
-       (LU-MI, MA-JU, MI-VI), con un salón y un profesor libres en esas franjas.
-    4. Solicitudes: entre 3 y 6 asignaturas por estudiante, con popularidad
-       tipo Zipf (unas asignaturas mucho más pedidas que otras) y más
-       probabilidad de pedir las de su propio semestre. Prioridad de 1 a 5.
-    5. Cupos: se reparten según la demanda real de cada asignatura,
-       multiplicada por la "holgura" (< 1 crea competencia por los cupos).
-    6. Compañeros: más probables dentro del mismo semestre. La relación se
-       genera simétrica.
-    7. Afinidad: cada profesor tiene una reputación y la calificación de cada
-       estudiante sale cerca de ella. Cada estudiante conoce solo a unos
-       pocos profesores, sobre todo a los de sus asignaturas; al resto, 0.
-    8. Franjas no disponibles (estudiantes que trabajan mañanas o tardes) y
-       franjas que se prefieren libres (viernes libre, tardes libres, ...).
-
-Complejidad: O(n * m) para las solicitudes (n estudiantes, m asignaturas),
-O(k * (|S| + |P|)) para los horarios (k secciones) y O(|S|^2) para delta.
-"""
+"""Generador de instancias aleatorias. Con la misma semilla se obtiene la misma instancia."""
 
 from __future__ import annotations
 
@@ -91,9 +63,7 @@ def generar(p: Parametros) -> dict:
     def ordenar(franjas) -> list[list]:
         return [[d, b] for d, b in sorted(franjas, key=lambda f: (orden_dia[f[0]], f[1]))]
 
-    # ------------------------------------------------------------------
     # 1. Asignaturas y número de secciones
-    # ------------------------------------------------------------------
     m = p.asignaturas or p.estudiantes // 15 + 10
     A = _ids("A", m)
     semestre_asig = {a: rng.randint(1, p.semestres) for a in A}
@@ -105,9 +75,7 @@ def generar(p: Parametros) -> dict:
     n_profesores = p.profesores or max(2, math.ceil(k / 3))
     p = replace(p, asignaturas=m, salones=n_salones, edificios=n_edificios, profesores=n_profesores)
 
-    # ------------------------------------------------------------------
     # 2. Edificios, salones y distancias
-    # ------------------------------------------------------------------
     B = _ids("B", n_edificios, minimo=1)
     coords = {b: (round(rng.uniform(0, p.lado_campus), 1), round(rng.uniform(0, p.lado_campus), 1)) for b in B}
     S = _ids("S", n_salones)
@@ -126,9 +94,7 @@ def generar(p: Parametros) -> dict:
                 fila.append(round(math.dist(coords[edificio_de[s1]], coords[edificio_de[s2]]), 1))
         distancias.append(fila)
 
-    # ------------------------------------------------------------------
     # 3. Horarios: salón y profesor libres en las franjas de cada sección
-    # ------------------------------------------------------------------
     P = _ids("P", n_profesores)
     if len(D) >= 3:
         grupos_dias = [(D[i], D[i + 2]) for i in range(len(D) - 2)]   # LU-MI, MA-JU, MI-VI
@@ -167,9 +133,7 @@ def generar(p: Parametros) -> dict:
     for g in secciones:
         secciones_de_asig[g["asignatura"]].append(g)
 
-    # ------------------------------------------------------------------
     # 4. Estudiantes y solicitudes
-    # ------------------------------------------------------------------
     n = p.estudiantes
     E = _ids("E", n, minimo=4)
     semestre_est = {e: rng.randint(1, p.semestres) for e in E}
@@ -182,7 +146,7 @@ def generar(p: Parametros) -> dict:
     demanda = dict.fromkeys(A, 0)
     for e in E:
         q = min(rng.randint(*p.solicitudes_por_estudiante), m)
-        # Muestreo ponderado sin reemplazo (Efraimidis-Spirakis): llave u^(1/w), se toman las q mayores.
+        # Elegir q asignaturas al azar según su popularidad, sin repetir.
         llaves = {}
         for a in A:
             w = popularidad[a] * (4 if semestre_asig[a] == semestre_est[e] else 1)
@@ -192,17 +156,13 @@ def generar(p: Parametros) -> dict:
         for a in elegidas:
             demanda[a] += 1
 
-    # ------------------------------------------------------------------
     # 5. Cupos según la demanda
-    # ------------------------------------------------------------------
     for a in A:
         base = demanda[a] / n_secciones[a] * p.holgura
         for g in secciones_de_asig[a]:
             g["cupo"] = max(1, round(base * rng.uniform(0.8, 1.2)))
 
-    # ------------------------------------------------------------------
     # 6. Compañeros
-    # ------------------------------------------------------------------
     por_semestre = defaultdict(list)
     for e in E:
         por_semestre[semestre_est[e]].append(e)
@@ -215,9 +175,7 @@ def generar(p: Parametros) -> dict:
                 companeros[e].add(c)
                 companeros[c].add(e)
 
-    # ------------------------------------------------------------------
     # 7. Afinidad con los profesores
-    # ------------------------------------------------------------------
     reputacion = {q: rng.uniform(-2, 2) for q in P}
     afinidad = {}
     for e in E:
@@ -230,9 +188,7 @@ def generar(p: Parametros) -> dict:
                 conocidos[q] = max(-2, min(2, round(reputacion[q] + rng.gauss(0, 0.8))))
         afinidad[e] = {q: v for q, v in sorted(conocidos.items()) if v != 0}
 
-    # ------------------------------------------------------------------
     # 8. Franjas no disponibles y franjas que se prefieren libres
-    # ------------------------------------------------------------------
     mitad = h // 2
     mananas = {(d, b) for d in D for b in range(1, mitad + 1)}
     tardes = {(d, b) for d in D for b in range(mitad + 1, h + 1)}

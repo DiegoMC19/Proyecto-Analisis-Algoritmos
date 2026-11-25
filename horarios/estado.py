@@ -1,19 +1,4 @@
-"""Asignación parcial con la función objetivo mantenida de forma incremental.
-
-Los backtrackings agregan y quitan pares (e, g) muchas veces.
-Recalcular f desde cero cuesta O(|X|) cada vez; aquí cada cambio cuesta
-O(k_e + |C_e| + |F_g|), con k_e el número de secciones que ya tiene e.
-
-Cambio en cada criterio al inscribir a e en g (si la inscripción es válida):
-    f1 += pi_e(a_g)
-    f2 += phi_e(p_g)
-    f3 += |C_e ∩ inscritos(g)| + |{e' ∈ inscritos(g) : e ∈ C_e'}|
-    f4 += |L_e ∩ F_g|            (F_g no se cruza con las otras clases de e)
-    f5 += sum_{g' ∈ G_X(e)} delta(s_g, s_g') * (seguidas(g, g') + seguidas(g', g))
-
-Las fórmulas suponen que la asignación siempre es válida, por eso solo se
-debe llamar a inscribir() cuando puede_inscribir() es verdadero.
-"""
+"""Asignación parcial que mantiene f actualizada al inscribir o retirar estudiantes."""
 
 from __future__ import annotations
 
@@ -36,7 +21,6 @@ class Estado:
         self._seguidas: dict[tuple[str, str], int] = {}
         self.f_parcial = [0.0] * 6                                      # f1..f5 en f_parcial[1..5]
 
-    # ------------------------------------------------------------------
     @property
     def f(self) -> float:
         w, c = self.w, self.f_parcial
@@ -53,7 +37,6 @@ class Estado:
             self._seguidas[clave] = sum(1 for d, b in self.inst.secciones[g].franjas if (d, b + 1) in F2)
         return self._seguidas[clave]
 
-    # ------------------------------------------------------------------
     def puede_inscribir(self, e_id: str, g_id: str) -> bool:
         """¿Agregar (e, g) mantiene las restricciones (1)-(4)?"""
         e = self.inst.estudiantes[e_id]

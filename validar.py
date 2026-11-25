@@ -1,7 +1,6 @@
-"""Revisa que uno o varios archivos de instancia cumplan las reglas de validez.
+"""Valida uno o varios archivos de instancia.
 
-Uso:
-    python validar.py datos/instancias/ejemplo.json [otra.json ...]
+Uso: python validar.py INSTANCIA [INSTANCIA ...]
 """
 
 import sys

@@ -1,16 +1,4 @@
-"""Reglas de validez de una instancia (Sección 4.2 del documento).
-
-Trabaja sobre el JSON leído (un dict) y no sobre el modelo, para poder
-reportar todos los errores en lugar de fallar con el primero.
-
-    1. ids únicos y referencias que existen.
-    2. distancias: matriz |S| x |S|, no negativa, diagonal 0 y simétrica.
-    3. franjas con día en D y bloque entre 1 y h.
-    4. secciones con al menos una franja, sin repetir, y cupo entero >= 1.
-    5. solicitudes sin asignaturas repetidas y prioridades entre 1 y 5.
-    6. L_e ∩ N_e = ∅ y e ∉ C_e.
-    7. afinidades entre -2 y 2 y pesos >= 0.
-"""
+"""Reglas de validez de un archivo de instancia."""
 
 from __future__ import annotations
 
@@ -38,7 +26,6 @@ def validar_datos(datos: dict) -> list[str]:
 
     errores: list[str] = []
 
-    # --- Franjas F = D x H (regla 3) ---
     dias = datos["franjas"].get("dias") if isinstance(datos["franjas"], dict) else None
     h = datos["franjas"].get("bloques") if isinstance(datos["franjas"], dict) else None
     if not isinstance(dias, list) or not dias or len(set(map(str, dias))) != len(dias):
@@ -65,7 +52,6 @@ def validar_datos(datos: dict) -> list[str]:
             validas.add(tuple(f))
         return validas
 
-    # --- ids únicos (regla 1) ---
     def ids_unicos(lista, nombre: str) -> set[str]:
         if not isinstance(lista, list):
             errores.append(f"{nombre} debe ser una lista")
@@ -93,7 +79,6 @@ def validar_datos(datos: dict) -> list[str]:
             if isinstance(s, dict) and "edificio" in s and s["edificio"] not in B:
                 errores.append(f"salon {s.get('id')}: el edificio '{s['edificio']}' no existe")
 
-    # --- Distancias (regla 2) ---
     n_s = len(datos["salones"]) if isinstance(datos["salones"], list) else 0
     M = datos["distancias"]
     if (not isinstance(M, list) or len(M) != n_s
@@ -115,7 +100,6 @@ def validar_datos(datos: dict) -> list[str]:
                     if abs(M[i][j] - M[j][i]) > TOLERANCIA:
                         errores.append(f"distancias no es simétrica en [{i}][{j}] y [{j}][{i}]")
 
-    # --- Secciones (reglas 1, 3 y 4) ---
     for g in datos["secciones"] if isinstance(datos["secciones"], list) else []:
         if not isinstance(g, dict):
             continue
@@ -130,7 +114,6 @@ def validar_datos(datos: dict) -> list[str]:
         if not es_entero(g.get("cupo")) or g["cupo"] < 1:
             errores.append(f"{ctx}: el cupo debe ser un entero >= 1")
 
-    # --- Estudiantes (reglas 1, 3, 5, 6 y 7) ---
     for e in datos["estudiantes"] if isinstance(datos["estudiantes"], list) else []:
         if not isinstance(e, dict):
             continue
@@ -184,7 +167,6 @@ def validar_datos(datos: dict) -> list[str]:
                 if not es_entero(v) or not -2 <= v <= 2:
                     errores.append(f"{ctx}: la afinidad con '{p}' debe ser un entero entre -2 y 2")
 
-    # --- Pesos (regla 7) ---
     pesos = datos["pesos"]
     for i in range(1, 6):
         w = pesos.get(f"w{i}") if isinstance(pesos, dict) else None

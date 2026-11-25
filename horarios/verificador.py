@@ -1,23 +1,4 @@
-"""Verificador de asignaciones.
-
-Revisa que una asignación X cumpla las restricciones del documento
-
-    (1) a_g ∈ R_e                               (solo asignaturas pedidas)
-    (2) a_g != a_g'  y  F_g ∩ F_g' = ∅           (sin repetir asignatura ni cruces)
-    (3) F_g ∩ N_e = ∅                            (disponibilidad)
-    (4) |{e | (e, g) ∈ X}| <= c_g               (cupo)
-
-y calcula por su cuenta la función objetivo
-
-    f(X) = w1 f1 + w2 f2 + w3 f3 - w4 f4 - w5 f5.
-
-Además de (1)-(4) se reportan errores de "formato": pares que nombran un
-estudiante o una sección que no existen, o pares repetidos.
-
-Complejidad: con |X| pares, k_e secciones por estudiante y |F_g| franjas por
-sección, la verificación cuesta O(|X| + sum_e k_e^2 * max|F_g|), que en la
-práctica es lineal en |X| porque k_e y |F_g| son pequeños (<= 6 y <= 8).
-"""
+"""Revisa las restricciones (1)-(4) de una asignación y calcula la función objetivo f."""
 
 from __future__ import annotations
 
@@ -69,16 +50,10 @@ class Reporte:
     objetivo: Objetivo = field(default_factory=Objetivo)
 
 
-# ----------------------------------------------------------------------------
 # Agrupación de X
-# ----------------------------------------------------------------------------
 
 def _agrupar(inst: Instancia, asignacion: Asignacion, violaciones: list[Violacion] | None):
-    """Devuelve G_X(e) para cada estudiante y los inscritos de cada sección.
-
-    Los pares con ids inexistentes o repetidos se descartan (y se reportan
-    como violaciones de formato si se pasa la lista `violaciones`).
-    """
+    """Agrupa X por estudiante y por sección; descarta pares inválidos o repetidos."""
     secciones_de: dict[str, list[str]] = defaultdict(list)   # G_X(e)
     inscritos: dict[str, set[str]] = defaultdict(set)         # {e | (e, g) ∈ X}
     vistos: set[tuple[str, str]] = set()
@@ -101,9 +76,7 @@ def _agrupar(inst: Instancia, asignacion: Asignacion, violaciones: list[Violacio
     return secciones_de, inscritos
 
 
-# ----------------------------------------------------------------------------
 # Función objetivo
-# ----------------------------------------------------------------------------
 
 def _objetivo(inst: Instancia, secciones_de, inscritos) -> Objetivo:
     o = Objetivo()
@@ -117,7 +90,7 @@ def _objetivo(inst: Instancia, secciones_de, inscritos) -> Objetivo:
             o.f3 += len(e.companeros & inscritos[g.id])    # e' ∈ C_e en la misma sección
             ocupadas |= g.franjas
         o.f4 += len(e.libres & ocupadas)                   # |L_e ∩ O_X(e)|
-        # f5: pares ordenados g != g' con una clase de g en (d, b) y una de g' en (d, b+1)
+        # f5: distancia entre clases seguidas (bloque b y b+1 del mismo día)
         for g in secs:
             for g2 in secs:
                 if g is g2:
@@ -136,9 +109,7 @@ def calcular_objetivo(inst: Instancia, asignacion: Asignacion) -> Objetivo:
     return _objetivo(inst, secciones_de, inscritos)
 
 
-# ----------------------------------------------------------------------------
 # Restricciones
-# ----------------------------------------------------------------------------
 
 def verificar(inst: Instancia, asignacion: Asignacion) -> Reporte:
     """Revisa las restricciones (1)-(4) y recalcula f."""
@@ -182,17 +153,10 @@ def verificar(inst: Instancia, asignacion: Asignacion) -> Reporte:
     )
 
 
-# ----------------------------------------------------------------------------
 # Comparación con la salida esperada
-# ----------------------------------------------------------------------------
 
 def comparar_con_esperada(reporte: Reporte, asignacion: Asignacion, esperada: dict) -> dict:
-    """Compara una salida ya verificada con su salida esperada (Sección 4.4).
-
-    Es correcta si es válida y su f coincide con la esperada (tolerancia 1e-6).
-    En los casos hechos a mano ("origen": "manual") también se compara la
-    asignación exacta. Si no se conoce el óptimo, solo cuenta la validez.
-    """
+    """Correcta si es válida y su f coincide con la esperada (en casos a mano, también la asignación)."""
     if not reporte.valida:
         return {"correcta": False, "motivo": "la salida no cumple las restricciones"}
 

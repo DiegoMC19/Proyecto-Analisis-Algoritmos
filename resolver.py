@@ -1,12 +1,6 @@
-"""Ejecuta el algoritmo (voraz con varios criterios + backtracking con poda).
+"""Ejecuta el algoritmo sobre una o varias instancias, guarda la salida y la verifica.
 
-Uso:
-    python resolver.py datos/instancias/inst_n1000_s42.json
-    python resolver.py datos/instancias/*.json --solo-voraz
-    python resolver.py datos/instancias/inst_n5000_s42.json --tiempo 30
-
-Guarda la salida en resultados/<algoritmo>/<instancia>.json con el formato del
-Código 2, la verifica y, si existe datos/esperadas/<instancia>.json, la compara.
+Uso: python resolver.py INSTANCIA [INSTANCIA ...] [--solo-voraz] [--tiempo SEGUNDOS]
 """
 
 import argparse

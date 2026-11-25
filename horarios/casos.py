@@ -1,9 +1,4 @@
-"""Los 6 casos hechos a mano de la Tabla 2 del documento.
-
-Cada caso prueba una sola restricción o criterio y tiene una única
-asignación óptima, escrita aquí a mano. El valor de f de la salida
-esperada se calcula con el verificador.
-"""
+"""Los 6 casos de prueba hechos a mano."""
 
 from __future__ import annotations
 

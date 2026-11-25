@@ -1,12 +1,6 @@
-"""Calcula la asignación óptima de instancias pequeñas y la guarda como salida esperada.
+"""Calcula el óptimo de instancias pequeñas con el backtracking exacto y lo guarda como salida esperada.
 
-Uso:
-    python fuerza_bruta.py datos/instancias/caso1.json datos/instancias/inst_n4_s1.json
-    python fuerza_bruta.py datos/instancias/*.json --limite 20000000
-
-Si la salida esperada ya existe y es de un caso hecho a mano, no se
-sobrescribe: se compara con lo que encontró el backtracking.
-Las instancias cuyo espacio supera el límite se saltan.
+Uso: python fuerza_bruta.py INSTANCIA [INSTANCIA ...] [--limite N]
 """
 
 import argparse

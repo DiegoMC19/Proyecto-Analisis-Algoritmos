@@ -1,11 +1,4 @@
-"""Genera las gráficas y las tablas de resumen a partir de resultados/experimentos/*.csv.
-
-Uso:
-    python graficas.py
-
-Cada gráfica se guarda en PNG y en PDF.
-También escribe resultados/experimentos/resumen.md con las tablas.
-"""
+"""Genera las gráficas y resumen.md a partir de los CSV de los experimentos."""
 
 import csv
 import statistics as st
@@ -22,7 +15,7 @@ import numpy as np  # noqa: E402
 
 CARPETA = Path("resultados/experimentos")
 
-# Paleta (modo claro): un color fijo por algoritmo, siempre el mismo en todas las gráficas.
+# Un color fijo para cada algoritmo.
 COLOR = {"voraz": "#2a78d6", "vc": "#7a5af5", "bt": "#eb6834", "fb": "#1baf7a"}
 NOMBRE = {"voraz": "Voraz (prioridad)", "vc": "Voraz (3 criterios)", "bt": "Voraz + backtracking con cota",
           "fb": "Backtracking exacto sin cota"}
@@ -72,7 +65,6 @@ def pendiente(xs, ys) -> float:
     return float(np.polyfit(np.log(xs), np.log(ys), 1)[0])
 
 
-# ----------------------------------------------------------------------------
 
 def grafica_tiempo(esc, resumen):
     g = por(esc, "n")
@@ -149,7 +141,6 @@ def grafica_competencia(comp):
     guardar(fig, "competencia")
 
 
-# ----------------------------------------------------------------------------
 
 def tablas(cal, esc, comp, resumen):
     if cal:

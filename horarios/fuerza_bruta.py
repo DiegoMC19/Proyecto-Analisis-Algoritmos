@@ -1,19 +1,4 @@
-"""Backtracking: encuentra la asignación óptima de instancias pequeñas.
-
-Cada solicitud (e, a) con a ∈ R_e tiene t_a + 1 opciones: una de las t_a
-secciones de a, o ninguna. El espacio completo tiene
-
-    prod_{(e, a)} (t_a + 1)     =  (t + 1)^(n * q)  si todo es uniforme
-
-combinaciones (Sección 5 del documento). Se recorre con backtracking: en cada
-nivel se decide una solicitud y se descartan las ramas que ya violan una
-restricción, porque ninguna de sus hojas puede ser válida. Esa poda no cambia
-el resultado (se siguen evaluando todas las asignaciones válidas), solo evita
-recorrer las inválidas.
-
-Complejidad: O(prod (t_a + 1)) nodos en el peor caso, cada uno con costo
-O(k_e + |C_e|) gracias al Estado incremental.
-"""
+"""Backtracking exacto sin cota: calcula el óptimo de instancias pequeñas."""
 
 from __future__ import annotations
 
