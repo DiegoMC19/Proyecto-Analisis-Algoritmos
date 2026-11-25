@@ -13,9 +13,9 @@ horarios/            paquete principal
   verificador.py     restricciones (1)-(4), función objetivo f y comparación con la esperada
   generador.py       generador de instancias aleatorias con semilla (Sección 3)
   estado.py          asignación parcial con f actualizada en O(k_e + |C_e|) por cambio
-  fuerza_bruta.py    óptimo exacto por backtracking (instancias pequeñas)
+  fuerza_bruta.py    backtracking exacto sin cota: salida esperada de instancias pequeñas
   casos.py           los 6 casos hechos a mano (Tabla 2)
-  algoritmo.py       algoritmo principal: voraz por prioridad + búsqueda local
+  algoritmo.py       algoritmo principal: voraz con 3 criterios + backtracking con cota y tiempo límite
 datos/instancias/    archivos de instancia
 datos/esperadas/     salidas esperadas (mismo nombre que la instancia)
 resultados/<alg>/    salidas de cada algoritmo
@@ -24,9 +24,7 @@ generar.py           CLI: genera instancias
 crear_casos.py       CLI: escribe los casos a mano y sus salidas esperadas
 fuerza_bruta.py      CLI: calcula la salida esperada óptima de instancias pequeñas
 resolver.py          CLI: ejecuta el algoritmo, guarda y verifica la salida
-latex.txt            entrega 1 corregida (LaTeX)
-latex_final.txt      documento final completo: diseño, estrategia de datos, algoritmo y resultados (LaTeX)
-GUIA_SUSTENTACION.md guía para preparar la sustentación
+documento/           documento final (PDF y fuente LaTeX con sus imágenes)
 experimentos.py      corre los experimentos (calidad, escalabilidad, competencia) -> CSV
 graficas.py          gráficas PNG/PDF y resumen.md a partir de los CSV (requiere matplotlib)
 validar.py           CLI: valida instancias
@@ -44,6 +42,7 @@ python crear_casos.py
 python fuerza_bruta.py datos/instancias/caso*.json datos/instancias/inst_n4_s1.json
 python resolver.py datos/instancias/inst_n1000_s42.json
 python resolver.py datos/instancias/inst_n1000_s42.json --solo-voraz
+python resolver.py datos/instancias/inst_n5000_s42.json --tiempo 30   # segundos de backtracking
 python experimentos.py            # ~10 min; --rapido para una versión corta
 python graficas.py
 python validar.py datos/instancias/ejemplo.json

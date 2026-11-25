@@ -1,0 +1,57 @@
+{
+  "instancia": "inst_n4_s1.json",
+  "algoritmo": "voraz_bt",
+  "asignacion": [
+    {
+      "estudiante": "E0001",
+      "seccion": "G003"
+    },
+    {
+      "estudiante": "E0001",
+      "seccion": "G010"
+    },
+    {
+      "estudiante": "E0002",
+      "seccion": "G008"
+    },
+    {
+      "estudiante": "E0002",
+      "seccion": "G004"
+    },
+    {
+      "estudiante": "E0002",
+      "seccion": "G005"
+    },
+    {
+      "estudiante": "E0003",
+      "seccion": "G011"
+    },
+    {
+      "estudiante": "E0003",
+      "seccion": "G007"
+    },
+    {
+      "estudiante": "E0004",
+      "seccion": "G009"
+    }
+  ],
+  "no_asignadas": [
+    {
+      "estudiante": "E0003",
+      "asignatura": "A02"
+    },
+    {
+      "estudiante": "E0004",
+      "asignatura": "A05"
+    }
+  ],
+  "objetivo": {
+    "f1": 29,
+    "f2": -4,
+    "f3": 0,
+    "f4": 6,
+    "f5": 0,
+    "f": 276
+  },
+  "tiempo_ms": 0.8
+}

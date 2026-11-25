@@ -1,4 +1,4 @@
-"""Ejecuta el algoritmo (voraz + búsqueda local) sobre una o varias instancias.
+"""Ejecuta el algoritmo (voraz con varios criterios + backtracking con poda).
 
 Uso:
     python resolver.py datos/instancias/inst_n1000_s42.json
@@ -21,20 +21,19 @@ from horarios.verificador import comparar_con_esperada, verificar
 
 def main() -> int:
     sys.stdout.reconfigure(encoding="utf-8")
-    parser = argparse.ArgumentParser(description="Asignación de horarios: voraz + búsqueda local")
+    parser = argparse.ArgumentParser(description="Asignación de horarios: voraz + backtracking")
     parser.add_argument("instancias", nargs="+")
-    parser.add_argument("--solo-voraz", action="store_true", help="no hacer la búsqueda local")
-    parser.add_argument("--pasadas", type=int, default=100, help="máximo de pasadas de la búsqueda local")
-    parser.add_argument("--tiempo", type=float, default=60.0, help="segundos máximos de búsqueda local")
+    parser.add_argument("--solo-voraz", action="store_true", help="no hacer el backtracking")
+    parser.add_argument("--tiempo", type=float, default=10.0, help="segundos máximos del backtracking")
     parser.add_argument("--esperadas", default="datos/esperadas")
     args = parser.parse_args()
 
-    nombre_alg = "voraz" if args.solo_voraz else "voraz_bl"
+    nombre_alg = "voraz" if args.solo_voraz else "voraz_bt"
     todo_bien = True
     for ruta in args.instancias:
         nombre = Path(ruta).name
         inst = cargar_instancia(ruta)
-        r = resolver(inst, con_busqueda=not args.solo_voraz, max_pasadas=args.pasadas, tiempo_max=args.tiempo)
+        r = resolver(inst, con_backtracking=not args.solo_voraz, tiempo_max=args.tiempo)
 
         asignadas = {(e, inst.secciones[g].asignatura) for e, g in r.asignacion}
         no_asignadas = [{"estudiante": e.id, "asignatura": a}
@@ -52,12 +51,13 @@ def main() -> int:
 
         reporte = verificar(inst, r.asignacion)
         total = len(asignadas) + len(no_asignadas)
-        linea = (f"{nombre}: f = {r.objetivo.f:.3f} (voraz {r.f_voraz:.3f})  |  "
+        criterios = ", ".join(f"{c} {v:.1f}" for c, v in r.f_criterios.items())
+        linea = (f"{nombre}: f = {r.objetivo.f:.3f}  |  voraz ({criterios}; gana {r.criterio})  |  "
                  f"{len(asignadas)}/{total} solicitudes inscritas  |  {r.tiempo:.2f} s")
-        if r.busqueda:
-            b = r.busqueda
-            linea += (f"  |  {b.pasadas} pasadas, movimientos: {b.insertar} insertar, {b.cambiar} cambiar, "
-                      f"{b.expulsar} expulsar, {b.intercambiar} intercambiar{'' if b.optimo_local else ' (cortada por límite)'}")
+        if r.backtracking:
+            b = r.backtracking
+            linea += (f"  |  backtracking: {b.nodos} nodos, "
+                      + ("árbol completo (óptimo)" if b.completo else f"cortado a los {args.tiempo:g} s"))
         if not reporte.valida:
             todo_bien = False
             linea += f"  |  INVÁLIDA: {[v.a_dict() for v in reporte.violaciones[:3]]}"

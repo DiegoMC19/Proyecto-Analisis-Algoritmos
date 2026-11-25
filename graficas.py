@@ -23,8 +23,9 @@ import numpy as np  # noqa: E402
 CARPETA = Path("resultados/experimentos")
 
 # Paleta (modo claro): un color fijo por algoritmo, siempre el mismo en todas las gráficas.
-COLOR = {"voraz": "#2a78d6", "bl": "#eb6834", "fb": "#1baf7a"}
-NOMBRE = {"voraz": "Voraz", "bl": "Voraz + búsqueda local", "fb": "Backtracking"}
+COLOR = {"voraz": "#2a78d6", "vc": "#7a5af5", "bt": "#eb6834", "fb": "#1baf7a"}
+NOMBRE = {"voraz": "Voraz (prioridad)", "vc": "Voraz (3 criterios)", "bt": "Voraz + backtracking con cota",
+          "fb": "Backtracking exacto sin cota"}
 TINTA, TINTA_2, REJILLA = "#0b0b0b", "#52514e", "#e5e4e0"
 
 plt.rcParams.update({
@@ -77,7 +78,7 @@ def grafica_tiempo(esc, resumen):
     g = por(esc, "n")
     ns = list(g)
     fig, ax = plt.subplots(figsize=(6.4, 4.2))
-    for clave, col in (("voraz", "tiempo_voraz"), ("bl", "tiempo_bl")):
+    for clave, col in (("voraz", "tiempo_voraz"), ("vc", "tiempo_vc")):
         med = [st.median(max(f[col], 1e-4) for f in g[n]) for n in ns]
         ax.plot(ns, med, marker="o", color=COLOR[clave], label=NOMBRE[clave])
         b = pendiente(ns, med)
@@ -100,14 +101,14 @@ def grafica_fuerza_bruta(cal):
     g = por(cal, "n")
     ns = list(g)
     fig, ax = plt.subplots(figsize=(6.4, 4.2))
-    for clave, col in (("fb", "tiempo_fb"), ("bl", "tiempo_bl")):
+    for clave, col in (("fb", "tiempo_fb"), ("bt", "tiempo_bt")):
         med = [st.median(max(f[col], 1e-5) for f in g[n]) for n in ns]
         ax.plot(ns, med, marker="o", color=COLOR[clave], label=NOMBRE[clave])
     ax.set_yscale("log")
     ax.set_xticks(ns, [str(int(n)) for n in ns])
     ax.set_xlabel("Número de estudiantes n")
     ax.set_ylabel("Tiempo mediano (s, escala log)")
-    ax.set_title("Backtracking contra la heurística en instancias pequeñas")
+    ax.set_title("Backtracking exacto: sin cota contra con cota y voraz")
     ax.legend(loc="upper left")
     guardar(fig, "fuerza_bruta_vs_algoritmo")
 
@@ -116,14 +117,14 @@ def grafica_brecha(cal):
     g = por(cal, "n")
     ns = list(g)
     x = np.arange(len(ns))
-    ancho = 0.36
+    ancho = 0.26
     fig, ax = plt.subplots(figsize=(6.4, 4.2))
-    for i, (clave, col) in enumerate((("voraz", "brecha_voraz"), ("bl", "brecha_bl"))):
+    for i, (clave, col) in enumerate((("voraz", "brecha_voraz"), ("vc", "brecha_vc"), ("bt", "brecha_bt"))):
         medias = [st.mean(f[col] for f in g[n]) for n in ns]
-        barras = ax.bar(x + (i - 0.5) * (ancho + 0.02), medias, ancho, color=COLOR[clave], label=NOMBRE[clave])
+        barras = ax.bar(x + (i - 1) * (ancho + 0.02), medias, ancho, color=COLOR[clave], label=NOMBRE[clave])
         for b, v in zip(barras, medias):
-            ax.annotate(f"{v:.2f} %", (b.get_x() + b.get_width() / 2, v), textcoords="offset points",
-                        xytext=(0, 3), ha="center", fontsize=8, color=TINTA_2)
+            ax.annotate(f"{v:.2f}", (b.get_x() + b.get_width() / 2, v), textcoords="offset points",
+                        xytext=(0, 3), ha="center", fontsize=7.5, color=TINTA_2)
     ax.set_xticks(x, [f"n = {int(n)}\n({len(g[n])} inst.)" for n in ns])
     ax.set_ylabel("Brecha promedio contra el óptimo (%)")
     ax.set_title("Qué tan lejos queda cada algoritmo del óptimo")
@@ -136,8 +137,10 @@ def grafica_brecha(cal):
 def grafica_competencia(comp):
     hs = [f["holgura"] for f in comp]
     fig, ax = plt.subplots(figsize=(6.4, 4.2))
-    for clave in ("voraz", "bl"):
-        ax.plot(hs, [f[f"pct_inscritas_{clave}"] for f in comp], marker="o", color=COLOR[clave], label=NOMBRE[clave])
+    ax.plot(hs, [f["pct_prioridad5_bt"] for f in comp], marker="o", color=COLOR["bt"],
+            label="Solicitudes de prioridad 5")
+    ax.plot(hs, [f["pct_inscritas_bt"] for f in comp], marker="o", color=COLOR["voraz"],
+            label="Todas las solicitudes")
     ax.set_xlabel("Holgura (cupos ofrecidos / solicitudes de cada asignatura)")
     ax.set_ylabel("Solicitudes inscritas (%)")
     ax.set_title(f"Efecto de la competencia por cupos (n = {int(comp[0]['n'])})")
@@ -151,38 +154,44 @@ def grafica_competencia(comp):
 def tablas(cal, esc, comp, resumen):
     if cal:
         resumen += ["", "## Calidad contra el óptimo", "",
-                    "| n | instancias | espacio (mediana) | nodos backtracking (mediana) | tiempo backtracking (mediana) "
-                    "| óptimas voraz | óptimas voraz+BL | brecha voraz | brecha voraz+BL |",
-                    "|---|---|---|---|---|---|---|---|---|"]
+                    "| n | instancias | espacio (mediana) | nodos sin cota | tiempo sin cota | nodos con cota "
+                    "| tiempo voraz+BT | óptimas voraz | óptimas 3 criterios | óptimas voraz+BT "
+                    "| brecha voraz | brecha 3 criterios | brecha voraz+BT |",
+                    "|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
         for n, fs in por(cal, "n").items():
+            opt = lambda c: sum(f[c] < 1e-6 for f in fs)  # noqa: E731
+            m = lambda c: st.mean(f[c] for f in fs)  # noqa: E731
             resumen.append(
                 f"| {int(n)} | {len(fs)} | {st.median(f['espacio'] for f in fs):,.0f} "
                 f"| {st.median(f['nodos'] for f in fs):,.0f} | {st.median(f['tiempo_fb'] for f in fs):.3f} s "
-                f"| {sum(f['brecha_voraz'] < 1e-6 for f in fs)} | {sum(f['brecha_bl'] < 1e-6 for f in fs)} "
-                f"| {st.mean(f['brecha_voraz'] for f in fs):.2f} % | {st.mean(f['brecha_bl'] for f in fs):.2f} % |")
-        resumen.append(f"\nTotal: voraz óptimo en {sum(f['brecha_voraz'] < 1e-6 for f in cal)}/{len(cal)}, "
-                       f"voraz+BL en {sum(f['brecha_bl'] < 1e-6 for f in cal)}/{len(cal)}; "
-                       f"brecha máxima voraz {max(f['brecha_voraz'] for f in cal):.2f} %, "
-                       f"voraz+BL {max(f['brecha_bl'] for f in cal):.2f} %.")
+                f"| {st.median(f['nodos_bt'] for f in fs):,.0f} | {st.median(f['tiempo_bt'] for f in fs):.4f} s "
+                f"| {opt('brecha_voraz')} | {opt('brecha_vc')} | {opt('brecha_bt')} "
+                f"| {m('brecha_voraz'):.2f} % | {m('brecha_vc'):.2f} % | {m('brecha_bt'):.2f} % |")
+        tot = lambda c: sum(f[c] < 1e-6 for f in cal)  # noqa: E731
+        resumen.append(f"\nTotal: óptimo en {tot('brecha_voraz')}/{len(cal)} (voraz), {tot('brecha_vc')}/{len(cal)} "
+                       f"(3 criterios), {tot('brecha_bt')}/{len(cal)} (voraz+BT); brecha máxima voraz "
+                       f"{max(f['brecha_voraz'] for f in cal):.2f} %, 3 criterios {max(f['brecha_vc'] for f in cal):.2f} %; "
+                       f"backtracking completo en {sum(f['completo_bt'] == 'True' for f in cal)}/{len(cal)}.")
     if esc:
         resumen += ["", "## Escalabilidad (promedio de las semillas)", "",
-                    "| n | asignaturas | secciones | solicitudes | tiempo voraz | tiempo voraz+BL "
-                    "| inscritas voraz | inscritas voraz+BL | mejora de f por BL |",
-                    "|---|---|---|---|---|---|---|---|---|"]
+                    "| n | asignaturas | secciones | solicitudes | tiempo voraz | tiempo 3 criterios "
+                    "| inscritas | mejora por 3 criterios | mejora por backtracking | criterio ganador |",
+                    "|---|---|---|---|---|---|---|---|---|---|"]
         for n, fs in por(esc, "n").items():
             m = lambda c: st.mean(f[c] for f in fs)  # noqa: E731
+            ganadores = ", ".join(sorted({f["criterio"] for f in fs}))
             resumen.append(
                 f"| {int(n)} | {m('asignaturas'):.0f} | {m('secciones'):.0f} | {m('solicitudes'):.0f} "
-                f"| {m('tiempo_voraz'):.3f} s | {m('tiempo_bl'):.2f} s "
-                f"| {100 * m('inscritas_voraz') / m('solicitudes'):.1f} % "
-                f"| {100 * m('inscritas_bl') / m('solicitudes'):.1f} % | +{m('mejora_bl_pct'):.2f} % |")
+                f"| {m('tiempo_voraz'):.3f} s | {m('tiempo_vc'):.3f} s "
+                f"| {100 * m('inscritas_bt') / m('solicitudes'):.1f} % "
+                f"| +{m('mejora_vc_pct'):.2f} % | +{m('mejora_bt_pct'):.3f} % | {ganadores} |")
     if comp:
         resumen += ["", "## Competencia por cupos", "",
-                    "| holgura | inscritas voraz | inscritas voraz+BL | prioridad 5 inscritas (voraz+BL) |",
+                    "| holgura | inscritas 3 criterios | inscritas voraz+BT | prioridad 5 inscritas |",
                     "|---|---|---|---|"]
         for f in comp:
-            resumen.append(f"| {f['holgura']} | {f['pct_inscritas_voraz']} % | {f['pct_inscritas_bl']} % "
-                           f"| {f['pct_prioridad5_bl']} % |")
+            resumen.append(f"| {f['holgura']} | {f['pct_inscritas_vc']} % | {f['pct_inscritas_bt']} % "
+                           f"| {f['pct_prioridad5_bt']} % |")
 
 
 def main() -> int:

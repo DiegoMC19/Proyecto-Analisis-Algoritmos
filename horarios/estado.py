@@ -1,6 +1,6 @@
 """Asignación parcial con la función objetivo mantenida de forma incremental.
 
-El backtracking y la búsqueda local agregan y quitan pares (e, g) muchas veces.
+Los backtrackings agregan y quitan pares (e, g) muchas veces.
 Recalcular f desde cero cuesta O(|X|) cada vez; aquí cada cambio cuesta
 O(k_e + |C_e| + |F_g|), con k_e el número de secciones que ya tiene e.
 

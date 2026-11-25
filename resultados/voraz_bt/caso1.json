@@ -1,0 +1,25 @@
+{
+  "instancia": "caso1.json",
+  "algoritmo": "voraz_bt",
+  "asignacion": [
+    {
+      "estudiante": "E0001",
+      "seccion": "G001"
+    }
+  ],
+  "no_asignadas": [
+    {
+      "estudiante": "E0001",
+      "asignatura": "A02"
+    }
+  ],
+  "objetivo": {
+    "f1": 4,
+    "f2": 0,
+    "f3": 0,
+    "f4": 0,
+    "f5": 0,
+    "f": 40
+  },
+  "tiempo_ms": 0.1
+}

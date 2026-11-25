@@ -52,7 +52,7 @@
     {\large \textbf{Análisis de Algoritmos}}\\[0.2cm]
     Profesor: Andrés Moreno Barbosa, PhD\\[1.5cm]
 
-    {\Huge Proyecto - Entrega 2}\\[0.4cm]
+    {\Huge Proyecto - Entrega Final}\\[0.4cm]
     Asignación de horarios estudiantiles\\[2cm]
 
     Presentado por:\\[0.3cm]
@@ -69,13 +69,13 @@
 En este documento se presenta el proyecto completo de asignación de
 horarios estudiantiles. Las dos primeras partes son el análisis y diseño del
 problema y la estrategia de datos de la primera entrega, ya con la estructura
-de los datos que faltaba. La tercera parte describe la implementación: una
-heurística de dos fases (un voraz por prioridad seguido de una búsqueda
-local) y un backtracking exacto que usamos como referencia en instancias
-pequeñas. La cuarta parte presenta los experimentos: en 99 instancias
-pequeñas la heurística encuentra el óptimo en 72 y queda en promedio a
-0{,}77\,\% de él, y resuelve instancias de 5000 estudiantes en menos de un
-minuto.
+de los datos que faltaba. La tercera parte describe la solución, que aplica
+dos técnicas vistas en clase para problemas NP-completos: un voraz con tres
+criterios y un backtracking con poda que parte de la solución del voraz y
+tiene un tiempo límite. La cuarta parte presenta los experimentos: en 99
+instancias pequeñas el backtracking encuentra siempre el óptimo, cientos de
+veces más rápido que sin poda, y el voraz resuelve instancias de 5000
+estudiantes en menos de un segundo.
 \end{abstract}
 
 % ============================================================================
@@ -410,7 +410,7 @@ criterio y de $f$, y \texttt{tiempo\_ms} el tiempo de ejecución.
 \begin{lstlisting}[caption={Salida del algoritmo para la instancia del Código \ref{lst:instancia}.},label={lst:salida}]
 {
   "instancia": "ejemplo.json",
-  "algoritmo": "voraz_bl",
+  "algoritmo": "voraz_bt",
   "asignacion": [
     { "estudiante": "E0001", "seccion": "G001" },
     { "estudiante": "E0001", "seccion": "G002" },
@@ -602,8 +602,8 @@ porque el verificador revisa una asignación en tiempo polinomial.
 
 Con muchos estudiantes el problema es todavía más difícil, porque además de
 los cruces hay competencia por los cupos y dependencias entre estudiantes
-(compañeros). Por eso usamos el backtracking exacto solo en instancias
-pequeñas, como referencia, y para el resto proponemos una heurística.
+(compañeros). Por eso no buscamos un algoritmo exacto y eficiente, sino que
+aplicamos las técnicas vistas en clase para problemas NP-completos.
 
 \section{Implementación}
 
@@ -633,26 +633,26 @@ $f$ desde cero y comparación con la salida esperada.\\
 \texttt{estado} & Asignación parcial con $f$ actualizada de forma
 incremental.\\
 \hline
-\texttt{fuerza\_bruta} & El backtracking exacto.\\
+\texttt{fuerza\_bruta} & El backtracking exacto sin cota (referencia).\\
 \hline
 \texttt{casos} & Los 6 casos hechos a mano.\\
 \hline
-\texttt{algoritmo} & La heurística: voraz y búsqueda local.\\
+\texttt{algoritmo} & El algoritmo propuesto: voraz con tres criterios y backtracking con poda.\\
 \hline
 \end{tabular}
 \caption{Módulos de la implementación.}
 \label{tab:modulos}
 \end{table}
 
-El código tiene 53 pruebas unitarias: una por cada regla de validez y cada
+El código tiene 55 pruebas unitarias: una por cada regla de validez y cada
 restricción, los 6 casos hechos a mano, la comparación del backtracking
-contra un recorrido de todas las $(t+1)^{n\cdot q}$ combinaciones, y la
-comparación de la $f$ incremental contra la $f$ calculada desde cero.
+exacto contra un recorrido de todas las $(t+1)^{n\cdot q}$ combinaciones,
+la comparación del backtracking con poda contra el exacto, y la comparación
+de la $f$ incremental contra la $f$ calculada desde cero.
 
 \subsection{Estado incremental}
 
-El backtracking y la búsqueda local agregan y quitan pares $(e,g)$ muchas
-veces, y recalcular $f$ desde cero cuesta $O(|X|)$. Por eso la clase
+Los dos backtrackings agregan y quitan pares $(e,g)$ muchas veces, y recalcular $f$ desde cero cuesta $O(|X|)$. Por eso la clase
 \texttt{Estado} guarda $G_{X}(e)$, los inscritos $I(g)$ de cada sección, las
 franjas ocupadas $O_{X}(e)$ y los valores $f_{1},\dots,f_{5}$, y los
 actualiza en cada cambio. Si se inscribe a $e$ en $g$ y la asignación sigue
@@ -670,29 +670,33 @@ clases de $e$. Así, cada cambio cuesta $O(k_{e}+|C_{e}|)$, con $k_{e}$ el
 número de clases de $e$. Llamamos \emph{ganancia} de $(e,g)$ al cambio de
 $f$, $\Delta f=w_{1}\Delta f_{1}+w_{2}\Delta f_{2}+w_{3}\Delta f_{3}-w_{4}\Delta f_{4}-w_{5}\Delta f_{5}$.
 
-\section{Heurística: voraz más búsqueda local}
+\section{Algoritmo propuesto}
 
-Nuestra solución es una heurística de dos fases. No es un algoritmo de
-aproximación, porque no garantiza qué tan lejos queda del óptimo; lo que
-hicimos fue medirlo en la Parte IV.
+Para problemas NP-completos vimos en clase tres técnicas: algoritmos
+voraces, algoritmos de aproximación y backtracking. Nuestra solución combina
+dos de ellas. Primero, un voraz da rápido una buena asignación. Después, un
+backtracking recorre el árbol de decisiones de forma inteligente: empieza
+con la asignación del voraz como la mejor conocida, prueba primero las
+opciones más prometedoras, poda las ramas que no pueden mejorar y se detiene
+al cumplir un tiempo límite. Si alcanza a recorrer todo el árbol, la
+asignación que devuelve es la óptima. No es un algoritmo de aproximación,
+porque no garantiza qué tan lejos queda del óptimo cuando se corta por
+tiempo; eso lo medimos en la Parte IV.
 
-\subsection{Fase 1: voraz por prioridad}
+\subsection{Fase 1: voraz con varios criterios}
 
-Como $w_{1}$ es el peso más grande, lo más importante es inscribir las
-solicitudes de mayor prioridad. El voraz (Algoritmo \ref{alg:voraz})
-recorre todas las solicitudes de mayor a menor prioridad y le da a cada una
-la sección válida con mayor ganancia. La ganancia ya tiene en cuenta la
-afinidad, los compañeros inscritos antes, las franjas libres y la distancia
-a las otras clases del estudiante. Entre solicitudes de igual prioridad van
-primero las asignaturas con menos secciones, que tienen menos opciones.
+Cada solicitud $(e,a)$ se atiende en un orden fijo y toma la sección válida
+con mayor ganancia, si esa ganancia es positiva (Algoritmo
+\ref{alg:voraz}). La ganancia ya tiene en cuenta la prioridad, la afinidad,
+los compañeros inscritos antes, las franjas libres y la distancia a las
+otras clases del estudiante. El voraz nunca se devuelve sobre una decisión.
 
 \begin{algorithm}[H]
-\caption{Voraz por prioridad}\label{alg:voraz}
+\caption{Voraz con un criterio}\label{alg:voraz}
 \begin{algorithmic}[1]
-\Require una instancia
-\Ensure una asignación válida $X$
+\Function{Voraz}{$\mathit{criterio}$}
 \State $X\gets\emptyset$
-\State $L\gets$ solicitudes $(e,a)$ con $a\in R_{e}$, ordenadas por $\pi_{e}(a)$ descendente y luego por $|G_{a}|$ ascendente
+\State $L\gets$ solicitudes $(e,a)$ con $a\in R_{e}$, ordenadas según $\mathit{criterio}$
 \ForAll{$(e,a)\in L$}
   \State $g^{*}\gets\arg\max\{\Delta f(e,g)\mid g\in G_{a},\ X\cup\{(e,g)\}\text{ es válida}\}$
   \If{$g^{*}$ existe y $\Delta f(e,g^{*})>0$}
@@ -700,115 +704,111 @@ primero las asignaturas con menos secciones, que tienen menos opciones.
   \EndIf
 \EndFor
 \State \Return $X$
+\EndFunction
 \end{algorithmic}
 \end{algorithm}
 
-El voraz nunca se devuelve, y eso lo puede llevar a malas decisiones. Por
-ejemplo, si un estudiante pide $A$ con prioridad 5 y $B$ con prioridad 4,
-$A$ tiene una sección el lunes y otra el martes, $B$ solo una el martes, y
-el estudiante tiene afinidad 2 con el profesor de $A$ del martes, el voraz
-lo pone en $A$ el martes (ganancia $50+4$) y después ya no puede tomar $B$.
-Así obtiene $f=54$, cuando lo mejor es $A$ el lunes y $B$ el martes, con
-$f=90$.
+El resultado depende mucho del orden. Como en el problema de selección de
+actividades, donde probamos varios criterios y ninguno era siempre el mejor,
+aquí usamos tres criterios y nos quedamos con la mejor asignación
+(Algoritmo \ref{alg:criterios}):
 
-\subsection{Fase 2: búsqueda local}
+\begin{itemize}
+\item \textbf{Prioridad:} mayor $\pi_{e}(a)$ primero; en empate, la
+asignatura con menos secciones. Atiende primero lo que más se necesita.
+\item \textbf{Escasez:} primero las asignaturas con menos cupo frente a su
+demanda, es decir, con menor $\sum_{g\in G_{a}}c_{g}/|\{e\mid a\in R_{e}\}|$;
+en empate, mayor prioridad. Reparte primero los cupos más disputados.
+\item \textbf{Opciones:} primero las asignaturas con menos secciones; en
+empate, mayor prioridad. Las asignaturas con una sola sección no tienen
+alternativa, así que conviene ubicarlas antes de que otras clases ocupen
+esas franjas.
+\end{itemize}
 
-La búsqueda local parte de la asignación del voraz y prueba cuatro
-movimientos. Cada uno solo se acepta si $f$ aumenta; si no, se deshace.
+\begin{algorithm}[H]
+\caption{Voraz con varios criterios}\label{alg:criterios}
+\begin{algorithmic}[1]
+\State $X^{*}\gets\emptyset$
+\ForAll{$c\in\{\text{prioridad},\text{escasez},\text{opciones}\}$}
+  \State $X\gets$ \Call{Voraz}{$c$}
+  \If{$f(X)>f(X^{*})$}
+    \State $X^{*}\gets X$
+  \EndIf
+\EndFor
+\State \Return $X^{*}$
+\end{algorithmic}
+\end{algorithm}
+
+El voraz puede equivocarse por no devolverse. Por ejemplo, si un estudiante
+pide $A$ con prioridad 5 y $B$ con prioridad 4, $A$ tiene una sección el
+lunes y otra el martes, $B$ solo una el martes, y el estudiante tiene
+afinidad 2 con el profesor de $A$ del martes, el criterio de prioridad lo
+pone en $A$ el martes (ganancia $50+4$) y después ya no puede tomar $B$. Así
+obtiene $f=54$, cuando lo mejor es $A$ el lunes y $B$ el martes, con
+$f=90$. En este caso el criterio de opciones sí acierta, porque ubica primero
+a $B$, que tiene una sola sección.
+
+\subsection{Fase 2: backtracking con poda}
+
+El backtracking recorre el mismo árbol de la Sección \ref{sec:esperadas},
+como en el coloreado de grafos visto en clase: cada nivel decide una
+solicitud $(e,a)$ y sus ramas son las secciones de $a$ o ninguna. Las
+solicitudes se recorren en el orden del criterio de prioridad, y en cada
+nivel las secciones se prueban de mayor a menor ganancia, dejando
+``ninguna'' de última. Para no explorar todo el árbol se usan dos podas:
 
 \begin{enumerate}
-\item[A.] \textbf{Insertar:} una solicitud pendiente toma una sección que
-quedó con cupo.
-\item[B.] \textbf{Cambiar:} un estudiante pasa a otra sección de la misma
-asignatura, o la suelta si eso aumenta $f$.
-\item[C.] \textbf{Expulsar:} una solicitud pendiente $(e,a)$ entra a una
-sección $g$ de $a$ sacando lo que estorba: las clases de $e$ que se cruzan
-con $g$ y, si $g$ está llena, a otro estudiante $e_{2}$ de $g$. Después se
-intenta reubicar lo que salió (Algoritmo \ref{alg:expulsar}). Este
-movimiento arregla el ejemplo anterior. Para no multiplicar el tiempo por el
-cupo, en una sección llena solo se prueban los 3 estudiantes más
-prometedores: primero los que tienen otra sección libre a donde ir y luego
-los de menor prioridad.
-\item[D.] \textbf{Intercambiar:} dos estudiantes de dos secciones llenas de
-la misma asignatura cambian de sección entre sí. Ninguno de los dos podría
-moverse solo, porque no hay cupo.
+\item \textbf{Por restricciones:} solo se baja por secciones que mantienen
+la asignación válida, como \textsc{EsValido} en el coloreado.
+\item \textbf{Por cota:} para cada solicitud se calcula lo máximo que
+podría sumar a $f$, ignorando lo que resta:
+\[
+u(e,a)=w_{1}\pi_{e}(a)+w_{2}\max\bigl(0,\max_{g\in G_{a}}\varphi_{e}(p_{g})\bigr)+w_{3}\bigl(|C_{e}|+|\{e'\mid e\in C_{e'}\}|\bigr),
+\]
+y $U(i)$ es la suma de $u$ para las solicitudes de la $i$ en adelante. Si
+$f(X)+U(i)\leq f(X^{*})$, ninguna hoja de la rama puede superar a la mejor
+asignación encontrada y la rama se descarta.
 \end{enumerate}
 
 \begin{algorithm}[H]
-\caption{Movimiento de expulsión}\label{alg:expulsar}
+\caption{Backtracking con poda}\label{alg:poda}
 \begin{algorithmic}[1]
-\ForAll{solicitud pendiente $(e,a)$, de mayor a menor prioridad}
-  \ForAll{$g\in G_{a}$ con $F_{g}\cap N_{e}=\emptyset$}
-    \State $K\gets\{g'\in G_{X}(e)\mid F_{g'}\cap F_{g}\neq\emptyset\}$
-    \State $V\gets$ los 3 mejores candidatos $e_{2}\in I(g)$ si $g$ está llena; si no, $\{\text{ninguno}\}$
-    \ForAll{$e_{2}\in V$}
-      \State $f_{0}\gets f(X)$
-      \State quitar de $X$ los pares $(e,g')$ con $g'\in K$ y el par $(e_{2},g)$
-      \State agregar $(e,g)$ a $X$
-      \State reubicar a $e_{2}$ en la mejor sección válida de $a$, si la hay
-      \State reubicar cada asignatura de $K$ en la mejor sección válida, si la hay
-      \If{$f(X)>f_{0}$}
-        \State aceptar y pasar a la siguiente solicitud
-      \Else
-        \State deshacer los cambios
-      \EndIf
-    \EndFor
-  \EndFor
-\EndFor
-\end{algorithmic}
-\end{algorithm}
-
-En el intercambio, el cambio de $f$ se calcula con una fórmula directa, sin
-modificar $X$. Si $e_{1}\in I(g_{1})$ y $e_{2}\in I(g_{2})$ intercambian,
-$f_{1}$ no cambia (es la misma asignatura); $f_{2}$, $f_{4}$ y $f_{5}$
-cambian según la afinidad, las franjas libres y las distancias de cada uno en
-su sección nueva; y para $f_{3}$ se cuentan los amigos que cada uno tiene en
-la sección nueva menos los que tenía en la vieja.
-
-Los movimientos se aplican por pasadas (Algoritmo \ref{alg:bl}). Después de
-la primera, solo se revisan las asignaturas y los estudiantes que cambiaron
-en la pasada anterior, porque un movimiento sobre algo que no cambió da el
-mismo resultado que antes. Cuando una de esas pasadas no encuentra mejoras,
-se hace una pasada completa para confirmar que se llegó a un óptimo local,
-es decir, a una asignación que ninguno de los cuatro movimientos mejora.
-
-\begin{algorithm}[H]
-\caption{Búsqueda local}\label{alg:bl}
-\begin{algorithmic}[1]
-\Require una asignación válida $X$ (la del voraz)
-\Ensure una asignación válida $X'$ con $f(X')\geq f(X)$
-\State $\mathit{completa}\gets$ true
-\While{no se alcance el límite de pasadas o de tiempo}
-  \State $\mathit{mejoras}\gets$ \Call{Insertar}{$X$} $+$ \Call{Cambiar}{$X$} $+$ \Call{Expulsar}{$X$} $+$ \Call{Intercambiar}{$X$}
-  \If{$\mathit{mejoras}>0$}
-    \State $\mathit{completa}\gets$ false \Comment{la siguiente pasada solo revisa lo que cambió}
-  \ElsIf{$\mathit{completa}$}
-    \State \Break \Comment{óptimo local}
-  \Else
-    \State $\mathit{completa}\gets$ true \Comment{confirmar con una pasada completa}
+\Function{Explorar}{$i$} \Comment{$X$, $X^{*}$ y $L$ son globales}
+  \If{$f(X)>f(X^{*})$}
+    \State $X^{*}\gets X$
   \EndIf
-\EndWhile
-\State \Return $X$
+  \If{$i=|L|$ \textbf{or} $f(X)+U(i)\leq f(X^{*})$ \textbf{or} se acabó el tiempo}
+    \State \Return \Comment{hoja, poda por cota o tiempo límite}
+  \EndIf
+  \State $(e,a)\gets L[i]$
+  \State $O\gets$ secciones $g\in G_{a}$ con $X\cup\{(e,g)\}$ válida, de mayor a menor $\Delta f(e,g)$
+  \ForAll{$g\in O$}
+    \State agregar $(e,g)$ a $X$
+    \State \Call{Explorar}{$i+1$}
+    \State quitar $(e,g)$ de $X$
+  \EndFor
+  \State \Call{Explorar}{$i+1$} \Comment{no inscribir la solicitud}
+\EndFunction
 \end{algorithmic}
 \end{algorithm}
 
-La búsqueda siempre termina: cada movimiento aceptado aumenta $f$ y hay un
-número finito de asignaciones, así que nunca se repite una. Además se limita
-el número de pasadas (100) y el tiempo. En todos los experimentos terminó
-por llegar a un óptimo local, con entre 7 y 15 pasadas.
+Antes de la llamada inicial \textsc{Explorar}$(0)$ se hace $X\gets\emptyset$
+y $X^{*}\gets$ la asignación del voraz. Empezar con la del voraz tiene dos
+ventajas: el resultado nunca es peor que el voraz, y desde el principio la
+cota descarta muchas ramas. Si el recorrido termina antes del tiempo límite,
+$X^{*}$ es la asignación óptima; si no, es la mejor que se encontró.
 
-\section{Backtracking exacto}\label{sec:backtracking}
+\section{Backtracking exacto (referencia)}\label{sec:backtracking}
 
-Para conocer el óptimo de instancias pequeñas recorremos el espacio descrito en la
-Sección \ref{sec:esperadas} con backtracking (Algoritmo \ref{alg:bt}): en cada nivel se decide
-una solicitud (ninguna sección o una de las de su asignatura) y no se baja
-por las ramas que ya violan una restricción. Esa poda no cambia el
-resultado, porque ninguna asignación válida tiene una parte inválida; solo
-evita recorrer las ramas inválidas. No usamos cotas, así que no es
-ramificación y poda.
+Para conocer el óptimo de instancias pequeñas, y así tener una salida
+esperada independiente de nuestro algoritmo, usamos un backtracking más
+simple (Algoritmo \ref{alg:bt}): recorre el mismo árbol, solo poda por
+restricciones y no usa cota, orden de ganancias ni tiempo límite. Esa poda no
+cambia el resultado, porque ninguna asignación válida tiene una parte
+inválida; solo evita recorrer las ramas inválidas.
 
 \begin{algorithm}[H]
-\caption{Backtracking}\label{alg:bt}
+\caption{Backtracking exacto sin cota}\label{alg:bt}
 \begin{algorithmic}[1]
 \Function{Explorar}{$i$}
   \If{$i=|L|$}
@@ -831,12 +831,10 @@ ramificación y poda.
 \section{Análisis de complejidad}
 
 Sean $n$ el número de estudiantes, $Q=\sum_{e}|R_{e}|$ el número de
-solicitudes, $P\leq Q$ las solicitudes pendientes, $t$ el máximo de
-secciones por asignatura, $q$ el máximo de asignaturas por estudiante,
-$c$ el máximo de compañeros, $\kappa$ el cupo de una sección y
-$\tau=O(q+c)$ el costo de evaluar la ganancia de un par $(e,g)$ con el
-estado incremental. La Tabla \ref{tab:complejidad} resume el costo de cada
-parte.
+solicitudes, $t$ el máximo de secciones por asignatura, $q$ el máximo de
+asignaturas por estudiante, $c$ el máximo de compañeros y $\tau=O(q+c)$ el
+costo de evaluar la ganancia de un par $(e,g)$ con el estado incremental. La
+Tabla \ref{tab:complejidad} resume el costo de cada parte.
 
 \begin{table}[H]
 \centering
@@ -847,26 +845,27 @@ Parte & Costo\\
 \hline
 Verificador & $O\bigl(|X|+\sum_{e}k_{e}^{2}\,|F_{g}|\bigr)$\\
 \hline
-Voraz & $O(Q\log Q+Q\cdot t\cdot\tau)$\\
+Voraz con un criterio & $O(Q\log Q+Q\cdot t\cdot\tau)$\\
 \hline
-Búsqueda local, una pasada completa &
-A: $O(P\log P+P\,t\,\tau)$; B: $O(Q\,t\,\tau)$;
-C: $O(P\,t\,(\kappa\log\kappa+3\tau))$; D: $O(\sum_{a}t_{a}^{2}\kappa^{2}\tau)$\\
+Voraz con tres criterios & $3\cdot O(Q\log Q+Q\cdot t\cdot\tau)=O(Q\log Q+Q\cdot t\cdot\tau)$\\
 \hline
-Backtracking & $O\bigl(\prod_{(e,a)}(t_{a}+1)\cdot\tau\bigr)=O\bigl((t+1)^{Q}\,\tau\bigr)$\\
+Backtracking con poda & Peor caso $O\bigl((t+1)^{Q}\cdot t\,(\tau+\log t)\bigr)$; en la práctica se detiene al tiempo límite\\
+\hline
+Backtracking exacto sin cota & $O\bigl(\prod_{(e,a)}(t_{a}+1)\cdot\tau\bigr)=O\bigl((t+1)^{Q}\,\tau\bigr)$\\
 \hline
 \end{tabular}
 \caption{Complejidad de cada parte.}
 \label{tab:complejidad}
 \end{table}
 
-En el problema real $q\leq 6$, $t\leq 4$, y $c$ y $\kappa$ no dependen de
-$n$, así que $Q=O(n)$, el voraz es $O(n\log n)$ y una pasada completa de la
-búsqueda local es $O(n\log n)$ (por el ordenamiento de las solicitudes
-pendientes). No tenemos una cota polinomial para el número de pasadas,
-porque solo sabemos que $f$ crece en cada una; por eso se limita a $L$
-pasadas, y la búsqueda local queda en $O(L\cdot n\log n)$. El backtracking,
-en cambio, es exponencial en el número de solicitudes.
+En el problema real $q\leq 6$, $t\leq 4$ y $c$ no depende de $n$, así que
+$Q=O(n)$ y el voraz con tres criterios es $O(n\log n)$: correrlo tres veces
+solo multiplica el tiempo por una constante. Los dos backtrackings, en
+cambio, son exponenciales en el número de solicitudes, porque en el peor caso
+recorren las $(t+1)^{Q}$ hojas del árbol. La cota y el buen punto de partida
+no cambian el peor caso, pero en la práctica descartan la mayor parte del
+árbol; por eso el backtracking con poda se usa con un tiempo límite y
+devuelve la mejor asignación encontrada.
 
 % ============================================================================
 \part{Resultados}
@@ -876,15 +875,19 @@ en cambio, es exponencial en el número de solicitudes.
 
 Todos los experimentos se corrieron en un computador personal con Python
 3.14, en un solo hilo. Todas las salidas pasaron por el verificador antes de
-registrarse, y ninguna violó las restricciones. Además, la heurística
-resuelve bien los 6 casos hechos a mano. Hicimos tres experimentos:
+registrarse, y ninguna violó las restricciones. Además, el algoritmo
+resuelve bien los 6 casos hechos a mano. Comparamos tres versiones: el
+voraz con solo el criterio de prioridad, el voraz con los tres criterios, y
+el algoritmo completo (voraz con tres criterios más backtracking con poda).
+Hicimos tres experimentos:
 
 \begin{enumerate}
 \item \textbf{Calidad:} 99 instancias pequeñas ($n=3$ a $6$, con 5
 asignaturas, 2 o 3 solicitudes por estudiante y de 1 a 3 secciones por
-asignatura) cuyo óptimo se calculó con el backtracking.
+asignatura) cuyo óptimo se calculó con el backtracking exacto sin cota.
 \item \textbf{Escalabilidad:} instancias de 100 a 5000 estudiantes, tres
-semillas por tamaño, con los parámetros por defecto del generador.
+semillas por tamaño, con los parámetros por defecto del generador y 10
+segundos de límite para el backtracking.
 \item \textbf{Competencia:} una instancia de 1000 estudiantes con holguras
 entre 0{,}5 y 1{,}5.
 \end{enumerate}
@@ -892,30 +895,32 @@ entre 0{,}5 y 1{,}5.
 \section{Calidad contra el óptimo}
 
 La brecha de una solución $X$ es $100\cdot(f(X^{*})-f(X))/f(X^{*})$, con
-$X^{*}$ la asignación óptima. La búsqueda local duplica el número de
-instancias en las que se llega al óptimo y baja la brecha promedio de
-2{,}13\,\% a 0{,}77\,\% (Tabla \ref{tab:calidad} y Figura
-\ref{fig:brecha}). En 83 de las 99 instancias la brecha final es de 1\,\% o
-menos; la mayor fue de 10{,}4\,\%.
+$X^{*}$ la asignación óptima. En las 99 instancias el backtracking con poda
+recorrió el árbol completo, así que siempre encontró el óptimo (Tabla
+\ref{tab:calidad} y Figura \ref{fig:brecha}). Los tres criterios mejoran al
+voraz de un solo criterio: llegan al óptimo en 42 instancias en vez de 36 y
+bajan la brecha promedio de 2{,}13\,\% a 1{,}63\,\%. La brecha máxima de los
+dos voraces fue de 13{,}5\,\%, lo que muestra que el voraz solo puede
+equivocarse bastante en algunos casos.
 
 \begin{table}[H]
 \centering
 \footnotesize
 \setlength{\tabcolsep}{4pt}
-\begin{tabular}{|c|c|c|c|c|c|}
+\begin{tabular}{|c|c|c|c|c|c|c|c|}
 \hline
-$n$ & Instancias & \multicolumn{2}{c|}{Óptimas} & \multicolumn{2}{c|}{Brecha promedio}\\
- & & voraz & voraz+BL & voraz & voraz+BL\\
+$n$ & Instancias & \multicolumn{3}{c|}{Óptimas} & \multicolumn{3}{c|}{Brecha promedio}\\
+ & & voraz & 3 criterios & + BT & voraz & 3 criterios & + BT\\
 \hline
-3 & 30 & 14 & 23 & 1{,}75\,\% & 0{,}73\,\%\\
-4 & 30 & 10 & 21 & 1{,}79\,\% & 0{,}68\,\%\\
-5 & 30 & 10 & 22 & 2{,}77\,\% & 0{,}91\,\%\\
-6 & 9 & 2 & 6 & 2{,}37\,\% & 0{,}77\,\%\\
+3 & 30 & 14 & 15 & 30 & 1{,}75\,\% & 1{,}52\,\% & 0\,\%\\
+4 & 30 & 10 & 12 & 30 & 1{,}79\,\% & 1{,}19\,\% & 0\,\%\\
+5 & 30 & 10 & 13 & 30 & 2{,}77\,\% & 1{,}96\,\% & 0\,\%\\
+6 & 9 & 2 & 2 & 9 & 2{,}37\,\% & 2{,}37\,\% & 0\,\%\\
 \hline
-Total & 99 & 36 & 72 & 2{,}13\,\% & 0{,}77\,\%\\
+Total & 99 & 36 & 42 & 99 & 2{,}13\,\% & 1{,}63\,\% & 0\,\%\\
 \hline
 \end{tabular}
-\caption{Calidad contra el óptimo (BL: búsqueda local).}
+\caption{Calidad contra el óptimo (BT: backtracking con poda).}
 \label{tab:calidad}
 \end{table}
 
@@ -926,46 +931,71 @@ Total & 99 & 36 & 72 & 2{,}13\,\% & 0{,}77\,\%\\
 \label{fig:brecha}
 \end{figure}
 
-La Figura \ref{fig:bt} compara los tiempos en esas mismas instancias. El
-tiempo del backtracking se multiplica por cerca de 10 con cada estudiante
-adicional, mientras que el de la heurística se mantiene por debajo de un
-milisegundo.
+La poda por cota y el punto de partida del voraz reducen mucho la búsqueda
+(Tabla \ref{tab:poda} y Figura \ref{fig:bt}). Con 6 estudiantes el
+backtracking exacto sin cota visitó en mediana 633\,242 nodos y tardó
+1{,}6 s, mientras que el backtracking con poda visitó 1\,794 nodos y tardó
+menos de 7 milisegundos. En el peor caso de las 99 instancias, el primero
+tardó 15{,}6 s y el segundo 0{,}11 s.
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{|c|r|r|r|r|r|}
+\hline
+$n$ & Espacio & \multicolumn{2}{c|}{Sin cota} & \multicolumn{2}{c|}{Con poda}\\
+ & (mediana) & nodos & tiempo & nodos & tiempo\\
+\hline
+3 & 2\,560 & 1\,413 & 0{,}005 s & 69 & 0{,}0006 s\\
+4 & 27\,216 & 8\,577 & 0{,}022 s & 257 & 0{,}0012 s\\
+5 & 296\,960 & 70\,559 & 0{,}174 s & 772 & 0{,}0032 s\\
+6 & 2\,654\,208 & 633\,242 & 1{,}638 s & 1\,794 & 0{,}0067 s\\
+\hline
+\end{tabular}
+\caption{Backtracking exacto sin cota contra backtracking con poda (medianas).}
+\label{tab:poda}
+\end{table}
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.85\textwidth]{fuerza_bruta_vs_algoritmo.pdf}
-\caption{Tiempo del backtracking y de la heurística en instancias pequeñas.}
+\caption{Tiempo del backtracking sin cota y del algoritmo completo en instancias pequeñas.}
 \label{fig:bt}
 \end{figure}
 
 \section{Escalabilidad}
 
 La Tabla \ref{tab:escalabilidad} muestra el promedio de las tres semillas
-para cada tamaño. La búsqueda local mejora $f$ entre 3{,}2\,\% y 3{,}9\,\%
-sobre el voraz e inscribe cerca de 3 puntos porcentuales más de las
-solicitudes. Ajustando una recta en escala log-log (Figura
-\ref{fig:tiempo}), el tiempo del voraz crece como $n^{1{,}10}$, que coincide
-con $O(n\log n)$. El de la heurística completa crece como $n^{1{,}56}$, más
-rápido que una pasada: con más estudiantes se encuentran más movimientos, y
-cada uno hace que en la pasada siguiente se vuelvan a revisar las
-asignaturas y estudiantes que tocó. Aun así el crecimiento es polinomial y
-está muy lejos del exponencial del backtracking.
+para cada tamaño. Ajustando una recta en escala log-log (Figura
+\ref{fig:tiempo}), el tiempo de los dos voraces crece como $n^{1{,}08}$ y $n^{1{,}09}$, que
+coincide con $O(n\log n)$; el de tres criterios es unas tres veces el de
+uno, como se esperaba. Los tres criterios mejoran $f$ entre 0{,}5\,\% y
+1{,}7\,\% sobre el criterio de prioridad, y en estas instancias siempre ganó
+el criterio de opciones.
+
+En cambio, el backtracking casi no mejora al voraz en instancias grandes: en
+10 segundos visitó unos 2 millones de nodos, pero solo encontró una mejor
+asignación en 2 de las 18 instancias (como mucho +0{,}5\,\%). Esto es lo que
+se espera de un problema NP-difícil: el árbol tiene del orden de
+$(t+1)^{Q}$ hojas, con $Q$ entre 400 y 22\,000, así que en un tiempo razonable
+solo se alcanza a revisar una parte muy pequeña, cerca de las últimas
+decisiones.
 
 \begin{table}[H]
 \centering
 \footnotesize
 \setlength{\tabcolsep}{4pt}
-\begin{tabular}{|c|c|c|c|c|c|c|}
+\begin{tabular}{|c|c|c|c|c|c|c|c|}
 \hline
-$n$ & Secciones & Solicitudes & \multicolumn{2}{c|}{Tiempo} & Inscritas & Mejora\\
- & & & voraz & voraz+BL & voraz $\to$ voraz+BL & de $f$\\
+$n$ & Secciones & Solicitudes & \multicolumn{2}{c|}{Tiempo voraz} & Inscritas & \multicolumn{2}{c|}{Mejora de $f$}\\
+ & & & 1 criterio & 3 criterios & & 3 criterios & BT (10 s)\\
 \hline
-100 & 39 & 463 & 0{,}003 s & 0{,}13 s & 81{,}1 $\to$ 83{,}7\,\% & 3{,}23\,\%\\
-250 & 72 & 1122 & 0{,}009 s & 0{,}44 s & 84{,}0 $\to$ 86{,}7\,\% & 3{,}26\,\%\\
-500 & 115 & 2257 & 0{,}018 s & 1{,}20 s & 83{,}2 $\to$ 86{,}5\,\% & 3{,}90\,\%\\
-1000 & 187 & 4503 & 0{,}040 s & 3{,}64 s & 83{,}5 $\to$ 86{,}2\,\% & 3{,}62\,\%\\
-2500 & 428 & 11205 & 0{,}100 s & 18{,}18 s & 83{,}5 $\to$ 86{,}2\,\% & 3{,}29\,\%\\
-5000 & 871 & 22499 & 0{,}239 s & 51{,}60 s & 83{,}2 $\to$ 86{,}2\,\% & 3{,}48\,\%\\
+100 & 39 & 463 & 0{,}004 s & 0{,}012 s & 82{,}8\,\% & 1{,}16\,\% & 0{,}17\,\%\\
+250 & 72 & 1122 & 0{,}010 s & 0{,}031 s & 85{,}1\,\% & 0{,}47\,\% & 0\,\%\\
+500 & 115 & 2257 & 0{,}022 s & 0{,}066 s & 85{,}0\,\% & 1{,}43\,\% & 0{,}02\,\%\\
+1000 & 187 & 4503 & 0{,}042 s & 0{,}135 s & 85{,}8\,\% & 1{,}73\,\% & 0\,\%\\
+2500 & 428 & 11205 & 0{,}124 s & 0{,}385 s & 85{,}3\,\% & 1{,}16\,\% & 0\,\%\\
+5000 & 871 & 22499 & 0{,}280 s & 0{,}853 s & 85{,}5\,\% & 1{,}30\,\% & 0\,\%\\
 \hline
 \end{tabular}
 \caption{Escalabilidad (promedio de 3 semillas).}
@@ -975,33 +1005,34 @@ $n$ & Secciones & Solicitudes & \multicolumn{2}{c|}{Tiempo} & Inscritas & Mejora
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.85\textwidth]{tiempo_vs_n.pdf}
-\caption{Tiempo de ejecución según el número de estudiantes (escala log-log).}
+\caption{Tiempo de los voraces según el número de estudiantes (escala log-log).}
 \label{fig:tiempo}
 \end{figure}
 
 \section{Competencia por los cupos}
 
 La holgura es la razón entre los cupos ofrecidos y las solicitudes de cada
-asignatura. Con poca holgura casi todas las secciones quedan llenas desde
-el voraz, así que la búsqueda local ya no puede inscribir a más estudiantes
-y solo los reorganiza; su efecto se nota cuando hay algo de espacio (Tabla
-\ref{tab:competencia} y Figura \ref{fig:competencia}). En todos los casos se
-inscribe más del 97\,\% de las solicitudes de prioridad 5, que es lo que
-busca el peso $w_{1}$.
+asignatura. Con poca holgura casi todas las secciones se llenan y se
+inscribe cerca de la mitad de las solicitudes; con más holgura el porcentaje
+sube hasta el 94\,\% (Tabla \ref{tab:competencia} y Figura
+\ref{fig:competencia}). En todos los casos se inscribe más del 95\,\% de las
+solicitudes de prioridad 5, que es lo que busca el peso $w_{1}$. Con 10
+segundos el backtracking no cambió la asignación del voraz en ninguna de estas
+instancias.
 
 \begin{table}[H]
 \centering
 \small
-\begin{tabular}{|c|c|c|c|}
+\begin{tabular}{|c|c|c|}
 \hline
-Holgura & Inscritas voraz & Inscritas voraz+BL & Prioridad 5 inscritas\\
+Holgura & Solicitudes inscritas & Prioridad 5 inscritas\\
 \hline
-0{,}5 & 49{,}77\,\% & 49{,}77\,\% & 97{,}44\,\%\\
-0{,}7 & 69{,}53\,\% & 69{,}62\,\% & 97{,}44\,\%\\
-0{,}9 & 83{,}61\,\% & 86{,}06\,\% & 97{,}44\,\%\\
-1{,}1 & 89{,}61\,\% & 93{,}34\,\% & 97{,}44\,\%\\
-1{,}3 & 91{,}09\,\% & 94{,}24\,\% & 97{,}44\,\%\\
-1{,}5 & 91{,}33\,\% & 94{,}42\,\% & 97{,}44\,\%\\
+0{,}5 & 49{,}77\,\% & 96{,}66\,\%\\
+0{,}7 & 69{,}76\,\% & 96{,}00\,\%\\
+0{,}9 & 85{,}79\,\% & 95{,}55\,\%\\
+1{,}1 & 92{,}12\,\% & 95{,}33\,\%\\
+1{,}3 & 93{,}66\,\% & 95{,}11\,\%\\
+1{,}5 & 94{,}01\,\% & 95{,}11\,\%\\
 \hline
 \end{tabular}
 \caption{Efecto de la holgura ($n=1000$).}
@@ -1023,17 +1054,19 @@ no disponibles del estudiante.
 
 \begin{itemize}
 \item El problema es NP-difícil, así que no se puede esperar un algoritmo
-exacto y eficiente. El backtracking solo alcanza hasta unos 6 estudiantes.
-\item El voraz por prioridad es muy rápido ($O(n\log n)$) y ya inscribe
-casi todas las solicitudes de prioridad alta, pero como no se devuelve queda
-en promedio a 2\,\% del óptimo.
-\item La búsqueda local corrige buena parte de esos errores: llega al
-óptimo en 72 de 99 instancias pequeñas, queda en promedio a 0{,}77\,\% de
-él, y mejora $f$ en cerca de 3{,}5\,\% en las instancias grandes, con
-5000 estudiantes en menos de un minuto.
-\item La búsqueda local se queda en óptimos locales. Para escapar de ellos
-se podría probar recocido simulado o búsqueda tabú, o comparar contra un
-modelo de programación entera resuelto con un \emph{solver}.
+exacto y eficiente. Por eso aplicamos dos técnicas vistas en clase para
+problemas NP-completos: un voraz y un backtracking con poda.
+\item El voraz es muy rápido ($O(n\log n)$, menos de un segundo para 5000
+estudiantes) y siempre da una asignación válida. Como no se devuelve, puede
+quedar lejos del óptimo; usar tres criterios y quedarse con el mejor reduce
+la brecha promedio de 2{,}13\,\% a 1{,}63\,\%.
+\item El backtracking con poda encuentra el óptimo en todas las instancias
+pequeñas, y gracias a la cota y al punto de partida del voraz lo hace cientos
+de veces más rápido que el backtracking sin cota.
+\item En instancias grandes el backtracking ya no alcanza a recorrer el árbol
+y casi no mejora al voraz: muestra en la práctica el compromiso entre calidad
+y eficiencia de los problemas NP-completos. Para esas instancias la solución
+útil es la del voraz con tres criterios.
 \end{itemize}
 
 \end{document}

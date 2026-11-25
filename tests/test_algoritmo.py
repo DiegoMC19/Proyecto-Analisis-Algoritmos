@@ -1,12 +1,13 @@
-import random
 import unittest
 
-from horarios.algoritmo import delta_intercambio, resolver, voraz
+from horarios.algoritmo import CRITERIOS, backtracking, ordenar, resolver, voraz
 from horarios.casos import casos
 from horarios.fuerza_bruta import fuerza_bruta
 from horarios.generador import Parametros, generar
 from horarios.modelo import instancia_desde_dict
 from horarios.verificador import calcular_objetivo, verificar
+
+PEQUENA = dict(asignaturas=5, solicitudes_por_estudiante=(2, 3), secciones_por_asignatura=(1, 3), holgura=0.7)
 
 
 def instancia(n, semilla, **kw):
@@ -20,64 +21,62 @@ class TestAlgoritmo(unittest.TestCase):
             with self.subTest(caso=caso["numero"]):
                 r = resolver(instancia_desde_dict(caso["instancia"]))
                 self.assertEqual(sorted(r.asignacion), sorted(caso["esperada"]))
+                self.assertTrue(r.backtracking.completo)
+
+    def test_criterios_ordenan_todas_las_solicitudes(self):
+        inst = instancia(40, 1)
+        total = sum(len(e.solicitudes) for e in inst.estudiantes.values())
+        for c in CRITERIOS:
+            with self.subTest(criterio=c):
+                orden = ordenar(inst, c)
+                self.assertEqual(len(orden), total)
+                self.assertEqual(len(set(orden)), total)
 
     def test_siempre_valida(self):
         for n, semilla in [(30, 1), (80, 2), (200, 3)]:
             for holgura in (0.5, 1.0):
                 with self.subTest(n=n, holgura=holgura):
                     inst = instancia(n, semilla, holgura=holgura)
-                    for con_busqueda in (False, True):
-                        r = resolver(inst, con_busqueda=con_busqueda)
-                        reporte = verificar(inst, r.asignacion)
-                        self.assertTrue(reporte.valida, [v.a_dict() for v in reporte.violaciones[:3]])
-                        self.assertAlmostEqual(r.objetivo.f, reporte.objetivo.f, places=6)
+                    for c in CRITERIOS:
+                        estado = voraz(inst, c)
+                        self.assertTrue(verificar(inst, estado.asignacion()).valida)
+                        self.assertAlmostEqual(estado.f, calcular_objetivo(inst, estado.asignacion()).f, places=6)
+                    r = resolver(inst, tiempo_max=0.5)
+                    reporte = verificar(inst, r.asignacion)
+                    self.assertTrue(reporte.valida, [v.a_dict() for v in reporte.violaciones[:3]])
+                    self.assertAlmostEqual(r.objetivo.f, reporte.objetivo.f, places=6)
 
-    def test_busqueda_local_no_empeora(self):
+    def test_el_mejor_criterio_y_el_backtracking_no_empeoran(self):
         for semilla in range(4):
             inst = instancia(150, semilla, holgura=0.7)
-            r = resolver(inst)
+            r = resolver(inst, tiempo_max=0.5)
+            self.assertAlmostEqual(r.f_voraz, max(r.f_criterios.values()), places=6)
             self.assertGreaterEqual(r.objetivo.f, r.f_voraz - 1e-6)
-            self.assertTrue(r.busqueda.optimo_local)
 
-    def test_nunca_supera_el_optimo(self):
-        kw = dict(asignaturas=5, solicitudes_por_estudiante=(2, 3), secciones_por_asignatura=(1, 3), holgura=0.7)
-        for semilla in range(10):
+    def test_backtracking_completo_da_el_optimo(self):
+        """Si recorre todo el árbol, el backtracking con cota llega al mismo f que
+        el backtracking exacto sin cota (fuerza_bruta)."""
+        for semilla in range(1, 16):
             with self.subTest(semilla=semilla):
-                inst = instancia(4, semilla, **kw)
+                inst = instancia(4, semilla, **PEQUENA)
                 optimo = fuerza_bruta(inst).objetivo.f
-                f = resolver(inst).objetivo.f
-                self.assertLessEqual(f, optimo + 1e-6)
+                r = resolver(inst, tiempo_max=30)
+                self.assertTrue(r.backtracking.completo)
+                self.assertAlmostEqual(r.objetivo.f, optimo, places=6)
+                self.assertLessEqual(r.f_voraz, optimo + 1e-6)
 
-    def test_delta_intercambio_exacto(self):
-        """El Δf calculado sin tocar la asignación es igual a hacer el intercambio de verdad."""
-        inst = instancia(300, 5, holgura=0.6, max_companeros=8)
-        estado = voraz(inst)
-        rng = random.Random(0)
-        probados = 0
-        for a, secs in inst.secciones_por_asignatura.items():
-            if len(secs) < 2:
-                continue
-            g1, g2 = secs[0], secs[1]
-            for e1 in list(estado.inscritos[g1]):
-                for e2 in list(estado.inscritos[g2]):
-                    F1, F2 = inst.secciones[g1].franjas, inst.secciones[g2].franjas
-                    if (F2 & (estado.ocupadas[e1] - F1)) or (F1 & (estado.ocupadas[e2] - F2)):
-                        continue
-                    if F2 & inst.estudiantes[e1].no_disponibles or F1 & inst.estudiantes[e2].no_disponibles:
-                        continue
-                    delta = delta_intercambio(estado, e1, g1, e2, g2)
-                    antes = estado.f
-                    estado.retirar(e1, g1); estado.retirar(e2, g2)
-                    estado.inscribir(e1, g2); estado.inscribir(e2, g1)
-                    self.assertAlmostEqual(estado.f - antes, delta, places=6)
-                    estado.retirar(e1, g2); estado.retirar(e2, g1)
-                    estado.inscribir(e1, g1); estado.inscribir(e2, g2)
-                    probados += 1
-                    if rng.random() < 0.3:
-                        break
-        self.assertGreater(probados, 50)
-        x = estado.asignacion()
-        self.assertAlmostEqual(estado.f, calcular_objetivo(inst, x).f, places=6)
+    def test_backtracking_sin_punto_de_partida(self):
+        inst = instancia(4, 3, **PEQUENA)
+        optimo = fuerza_bruta(inst).objetivo.f
+        bt = backtracking(inst, None, 30)
+        self.assertTrue(bt.completo)
+        self.assertAlmostEqual(bt.f, optimo, places=6)
+
+    def test_tiempo_limite(self):
+        inst = instancia(300, 1)
+        r = resolver(inst, tiempo_max=0.2)
+        self.assertFalse(r.backtracking.completo)
+        self.assertLess(r.tiempo_backtracking, 2.0)
 
 
 if __name__ == "__main__":
