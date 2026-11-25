@@ -84,6 +84,7 @@ voraces y ninguno es siempre el mejor.
 - Tiene afinidad +2 con el profesor de A del martes.
 - **Prioridad** pone A el martes (gana 50 + 4) y ya no puede tomar B: **f = 54**.
 - **Opciones** ubica primero B (una sola sección) y luego A el lunes: **f = 90**, el óptimo.
+  (En este ejemplo **escasez** también llega a 90, porque B tiene menos cupo por solicitud.)
 
 ### Fase 2: backtracking con poda (`backtracking`)
 Es el mismo árbol de decisiones que el exacto: un nivel por solicitud y, como ramas, cada
